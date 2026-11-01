@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TrojanRideshare" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/cardinal</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/cardinal_light</item>
+        <item name="colorOnPrimaryContainer">@color/cardinal_dark</item>
+        <item name="colorSecondary">@color/gold</item>
+        <item name="colorOnSecondary">@color/ink</item>
+        <item name="colorSecondaryContainer">@color/gold_light</item>
+        <item name="colorOnSecondaryContainer">@color/ink</item>
+        <item name="colorTertiary">@color/cardinal_dark</item>
+        <item name="android:colorBackground">@color/surface</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorOnSurfaceVariant">@color/ink_muted</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorError">@color/danger</item>
+        <item name="android:statusBarColor">@color/cardinal_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="materialCardViewStyle">@style/Widget.TrojanRideshare.Card</item>
+    </style>
+
+    <style name="Widget.TrojanRideshare.Card" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardBackgroundColor">@color/white</item>
+        <item name="strokeColor">@color/outline</item>
+        <item name="cardCornerRadius">14dp</item>
+    </style>
+
+    <style name="Widget.TrojanRideshare.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/cardinal</item>
+        <item name="titleTextColor">@color/white</item>
+        <item name="subtitleTextColor">@color/gold_light</item>
+        <item name="navigationIconTint">@color/white</item>
+    </style>
+
+    <style name="TextAppearance.TrojanRideshare.Section" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/cardinal_dark</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.TrojanRideshare.Label" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textColor">@color/ink_muted</item>
+    </style>
+
+    <style name="Widget.TrojanRideshare.StatusChip" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">3dp</item>
+        <item name="android:paddingBottom">3dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:background">@drawable/bg_status</item>
+    </style>
+</resources>

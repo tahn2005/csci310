@@ -1,0 +1,157 @@
+rules_version = '2';
+
+// TrojanRideshare Security Rules: the database itself rejects writes the requirements
+// forbid, so hiding a button in the app is never the only protection (FR-2.E4, FR-4.E5).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return request.auth.uid;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function rideDoc(rideId) {
+      return get(/databases/$(database)/documents/rides/$(rideId));
+    }
+
+    // ------------------------------------------------------------ users (FR-1)
+    match /users/{uid} {
+      allow read: if signedIn();
+      // FR-1.2: USC email, 10-digit USC ID, and the USC ID reserved in the same transaction.
+      allow create: if signedIn() && me() == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.email.matches('^[a-z0-9._%+-]+@usc[.]edu$')
+        && request.resource.data.uscId.matches('^[0-9]{10}$')
+        && getAfter(/databases/$(database)/documents/uscIds/$(request.resource.data.uscId)).data.uid == uid;
+      // FR-1.7 / FR-1.8: only the nickname and public ride choices change; never email or USC ID.
+      allow update: if signedIn() && me() == uid
+        && changedKeys().hasOnly(['nickname', 'publicRideIds']);
+      allow delete: if false;
+    }
+
+    // One document per registered USC ID, so an ID belongs to at most one account (FR-1.2.6).
+    match /uscIds/{uscId} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.uid == me()
+        && uscId.matches('^[0-9]{10}$');
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------ rides (FR-2 – FR-4)
+    match /rides/{rideId} {
+
+      // FR-2.5 / FR-2.E4: only the organizer changes the ride, and never its fixed details.
+      // FR-4.E5: once Completed, the organizer can't change anyone's payment status.
+      function organizerUpdate() {
+        return resource.data.organizerId == me()
+          && !changedKeys().hasAny(['title', 'origin', 'destination', 'maxRiders',
+                                    'expectedCostCents', 'note', 'createdAt'])
+          && (resource.data.activityStatus != 'COMPLETED' || !changedKeys().hasAny(['shares']));
+      }
+
+      // FR-3.6 / FR-3.9: a student adds or removes only their own pending request.
+      function requesterUpdate() {
+        return changedKeys().hasOnly(['pendingRequests'])
+          && request.resource.data.pendingRequests.diff(resource.data.pendingRequests)
+               .affectedKeys().hasOnly([me()]);
+      }
+
+      // FR-3.10.1: a rider removes only themself from the ride.
+      function riderLeaving() {
+        return changedKeys().hasOnly(['members', 'memberIds', 'capacityStatus'])
+          && me() in resource.data.memberIds
+          && !(me() in request.resource.data.memberIds)
+          && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1
+          && resource.data.memberIds.hasAll(request.resource.data.memberIds);
+      }
+
+      // FR-4.6: a rider marks only their own share Paid, without changing the amount.
+      function riderPaying() {
+        return changedKeys().hasOnly(['shares'])
+          && resource.data.activityStatus == 'COMPLETED'
+          && request.resource.data.shares.diff(resource.data.shares).affectedKeys().hasOnly([me()])
+          && request.resource.data.shares[me()].status == 'PAID'
+          && request.resource.data.shares[me()].amountCents == resource.data.shares[me()].amountCents;
+      }
+
+      allow read: if signedIn();
+
+      // FR-2.3: the organizer is the first rider; the ride starts On-Time and Open.
+      allow create: if signedIn()
+        && request.resource.data.organizerId == me()
+        && request.resource.data.memberIds == [me()]
+        && request.resource.data.activityStatus == 'ON_TIME'
+        && request.resource.data.capacityStatus == 'OPEN'
+        && request.resource.data.maxRiders is int
+        && request.resource.data.maxRiders >= 2
+        && request.resource.data.maxRiders <= 6
+        && request.resource.data.expectedCostCents is int
+        && request.resource.data.expectedCostCents > 0
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.pendingRequests.size() == 0;
+
+      allow update: if signedIn()
+        && (organizerUpdate() || requesterUpdate() || riderLeaving() || riderPaying());
+
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------ join requests (FR-3.6 – FR-3.11)
+    match /joinRequests/{requestId} {
+      // A missing request can be looked up so the app can say "This request was withdrawn".
+      allow get: if signedIn()
+        && (resource == null || resource.data.requesterId == me() || resource.data.organizerId == me());
+      allow list: if signedIn()
+        && (resource.data.requesterId == me() || resource.data.organizerId == me());
+
+      allow create: if signedIn()
+        && request.resource.data.requesterId == me()
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.rideId is string
+        && request.resource.data.organizerId == rideDoc(request.resource.data.rideId).data.organizerId
+        && request.resource.data.message.size() <= 200;
+
+      // FR-3.8: only the ride's organizer answers; FR-3.10.2: a new organizer takes over.
+      allow update: if signedIn()
+        && resource.data.organizerId == me()
+        && request.resource.data.requesterId == resource.data.requesterId
+        && request.resource.data.rideId == resource.data.rideId;
+
+      // FR-3.9: the requester cancels (deletes) their own pending request.
+      allow delete: if signedIn()
+        && resource.data.requesterId == me()
+        && resource.data.status == 'PENDING';
+    }
+
+    // ------------------------------------------------------------ non-payment flags (FR-4.7)
+    // Visible only to the organizer who set it and to the flagged rider.
+    match /nonPaymentFlags/{flagId} {
+      allow get: if signedIn()
+        && (resource == null || resource.data.userId == me() || resource.data.organizerId == me());
+      allow list: if signedIn()
+        && (resource.data.userId == me() || resource.data.organizerId == me());
+
+      // FR-4.E6: never on the organizer's own share.
+      allow create, update: if signedIn()
+        && request.resource.data.organizerId == me()
+        && rideDoc(request.resource.data.rideId).data.organizerId == me()
+        && request.resource.data.userId != me()
+        && flagId == request.resource.data.rideId + '_' + request.resource.data.userId;
+
+      // FR-4.7.1: cleared by the rider when they pay, or by the organizer.
+      allow delete: if signedIn()
+        && (resource.data.userId == me() || resource.data.organizerId == me());
+    }
+  }
+}

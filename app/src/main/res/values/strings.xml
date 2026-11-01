@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TrojanRideshare</string>
+    <string name="tagline">Share rides with fellow Trojans</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_my_rides">My Rides</string>
+    <string name="nav_history">History</string>
+    <string name="nav_profile">Profile</string>
+    <string name="create_ride">Create Ride</string>
+    <string name="log_out">Log Out</string>
+</resources>
