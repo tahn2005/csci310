@@ -1,0 +1,28 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-3 Request to Join a Ride (part 1 of 2): opening the ride
+autonumber
+actor Student
+participant ":RideDetail\nFragment" as F
+participant ":RideDetail\nViewModel" as VM
+participant ":Ride\nService" as RS #E6F4EA
+participant ":JoinRequest\nService" as JS
+
+Student -> F : open a ride
+F -> VM : load(rideId)
+VM -[#1B7F3B]> RS : <color:#1B7F3B>getRide(rideId)</color>
+RS -[#1B7F3B]-> VM : <color:#1B7F3B>ride</color>
+VM --> F : <color:#1B7F3B>ride (LiveData)</color>
+F -[#1B7F3B]> VM : <color:#1B7F3B>joinBlock(ride)</color>
+VM -> JS : <color:#B00020><s>checkEligibility(ride, mine)</s></color>\n<color:#1B7F3B>checkEligibility(ride)</color>
+JS --> VM : reason or null
+alt not eligible
+  VM --> F : <color:#B00020><s>joinBlock = reason</s></color>\n<color:#1B7F3B>reason</color>
+  F --> Student : button disabled with the\nreason, e.g. "This ride is full."\n<color:#1B7F3B>(Cancel Request if pending)</color>
+else eligible
+  F --> Student : Request to Join enabled
+  note over F : continues in part 2
+end
+$seqlegend()
+@enduml

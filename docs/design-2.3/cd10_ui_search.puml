@@ -1,0 +1,48 @@
+@startuml
+!include style.iuml
+
+package "Search & Requests UI" {
+  class RideSearchFragment <<Fragment>>
+  class RideSearchViewModel <<ViewModel>> $CHG {
+    $D-engine: RideSearchEngine$DE
+    $D-criteria: SearchCriteria$DE
+    $N+criteria: LiveData<SearchCriteria>$E
+    +results: LiveData<List<Ride>>
+    $D+message: LiveData<String>$DE
+    $N+empty: LiveData<String>$E
+    +open(): void
+    +setOrigin(p: Place): void
+    +setDestination(p: Place): void
+    +applyFilters(c: SearchCriteria): void
+    +clearFilters(): void
+    $N+current(): SearchCriteria$E
+    $N+isJoined(r: Ride): boolean$E
+    $N+hasPendingRequest(r: Ride): boolean$E
+    $N+suggest(query: String): List<Place>$E
+    $N+resolve(suggestion: Place): Place$E
+  }
+  class MyRidesFragment <<Fragment>>
+  class MyRidesViewModel <<ViewModel>> $CHG {
+    $D-joins: JoinRequestService$DE
+    $N+organizing: LiveData<List<Ride>>$E
+    $N+joined: LiveData<List<Ride>>$E
+    +requests: LiveData<List<JoinRequest>>
+    $D+pending: LiveData<List<JoinRequest>>$DE
+    $N+incoming: LiveData<List<JoinRequest>>$E
+    +load(): void
+    +accept(q: JoinRequest): void
+    +reject(q: JoinRequest): void
+    +cancel(q: JoinRequest): void
+  }
+}
+interface "PlaceField.Source" as Source <<interface>>
+RideSearchFragment --> RideSearchViewModel
+MyRidesFragment --> MyRidesViewModel
+RideSearchViewModel .[#1B7F3B].|> Source
+note bottom of MyRidesViewModel
+  <color:#1B7F3B>load() uses RideHistoryService.getUpcoming()</color>
+  <color:#1B7F3B>plus JoinRequestService.getIncomingRequests()</color>
+  <color:#1B7F3B>and getMyRequests().</color>
+end note
+$legend()
+@enduml

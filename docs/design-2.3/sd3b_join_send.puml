@@ -1,0 +1,38 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-3 Request to Join a Ride (part 2 of 2): sending the request
+autonumber 12
+actor Student
+participant ":RideDetail\nFragment" as F
+participant ":RideDetail\nViewModel" as VM
+participant ":JoinRequest\nService" as JS
+participant ":FirestoreRide\nRepository" as RR
+participant "ctx:\nRideTxContext" as TX
+
+Student -> F : tap Request to Join,\ntype message, Send
+F -> VM : requestToJoin(msg)
+VM -> JS : sendRequest(rideId, msg)
+JS -[#1B7F3B]> JS : <color:#1B7F3B>message <= 200 chars</color>
+JS -> RR : runTransaction(rideId, t)
+RR -[#1B7F3B]> RR : <color:#1B7F3B>NetworkMonitor</color>\n<color:#1B7F3B>.isOnline()</color>
+RR -> JS : t.apply(ctx)
+JS -> TX : getRide()<color:#B00020><s>, getRequest(id)</s></color>
+JS -> JS : checkEligibility(ride,\n<color:#1B7F3B>uid, now</color>) (check again)
+alt ride changed (full, cancelled)
+  JS --> RR : throw NOT_ALLOWED
+  RR --> JS : nothing written
+  JS --> VM : NOT_ALLOWED error
+  VM --> F : show reason\n<color:#1B7F3B>and reload()</color>
+else still eligible
+  JS -[#1B7F3B]> TX : <color:#1B7F3B>newRequestId()</color>
+  JS -[#1B7F3B]> TX : <color:#1B7F3B>putRide(ride with</color>\n<color:#1B7F3B>pendingRequests[uid])</color>
+  JS -> TX : putRequest(PENDING)
+  RR -> RR : <color:#1B7F3B>flush(),</color> commit
+  RR --> JS : ok
+  JS --> VM : request
+  VM --> F : "Request sent"
+  F --> Student : <color:#B00020><s>"Request Pending" button</s></color>\n<color:#1B7F3B>"Cancel Request" button</color>
+end
+$seqlegend()
+@enduml

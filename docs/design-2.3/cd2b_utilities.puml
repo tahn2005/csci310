@@ -1,0 +1,70 @@
+@startuml
+!include style.iuml
+
+package "Domain Model & Utilities: helpers (sub-package domain.util)" {
+  class Money <<utility>> $CHG {
+    +{static} parse(text: String): long $N throws AppException$E
+    +{static} format(cents: long): String
+    $N+{static} plain(cents: long): String$E
+  }
+  class GeoUtils <<utility>> $CHG {
+    +{static} distanceMiles(a: Place, b: Place): double
+    $N+{static} distanceMiles(lat1, lng1, lat2, lng2): double$E
+  }
+  class SafeLogger <<utility>> $CHG {
+    $N-{static} sink: Sink$E
+    $N+{static} setSink(s: Sink): void$E
+    +{static} log(msg: String): void
+    $N+{static} mask(msg: String): String$E
+  }
+  interface "SafeLogger.Sink" as Sink <<interface>> $NEW {
+    $N+write(message: String): void$E
+  }
+  interface Clock <<interface>> $CHG {
+    +now(): LocalDateTime
+    $N+instant(): Instant (default)$E
+  }
+  class DeviceClock <<new>> $NEW {
+    $N-offset: Duration$E
+    $N+now(): LocalDateTime$E
+    $N+getOffset(): Duration$E
+    $N+setOffset(d: Duration): void$E
+  }
+}
+
+package "Domain Model & Utilities: errors and callbacks" as errs {
+  interface "Callback<T>" as Callback <<interface>> {
+    +onSuccess(result: T): void
+    +onError(e: AppException): void
+  }
+  class AppException $CHG {
+    -code: ErrorCode
+    $N-fieldErrors: Map<String,String>$E
+    +getMessage(): String
+    $N+getCode(): ErrorCode$E
+    $N+getFieldErrors(): Map<String,String>$E
+    $N+{static} validation(fieldErrors | msg)$E
+    $N+{static} notAllowed(msg), conflict(msg)$E
+    $N+{static} offline(): AppException$E
+  }
+  enum ErrorCode <<enum>> $CHG {
+    VALIDATION
+    NOT_ALLOWED
+    CONFLICT
+    DUPLICATE
+    OFFLINE
+    $N NOT_FOUND$E
+    $N UNKNOWN$E
+  }
+}
+
+Money -[hidden]right-> GeoUtils
+Money -[hidden]down-> SafeLogger
+SafeLogger -[#1B7F3B]right-> Sink
+SafeLogger -[hidden]down-> Clock
+DeviceClock .[#1B7F3B]left.|> Clock
+Clock -[hidden]down-> Callback
+Callback .right.> AppException
+AppException -right-> ErrorCode
+$legend()
+@enduml

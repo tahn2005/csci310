@@ -1,0 +1,59 @@
+@startuml
+!include style.iuml
+
+package "Repositories: Firestore implementation (sub-package data.firestore)" {
+  class FirestoreUserRepository $CHG {
+    -db: FirebaseFirestore
+    $N-network: NetworkMonitor$E
+  }
+  class FirestoreRideRepository $CHG {
+    $N-{static} IN_QUERY_LIMIT = 10$E
+    -db: FirebaseFirestore
+    $N-network: NetworkMonitor$E
+    $N-clock: Clock$E
+  }
+  class FirestoreJoinRequestRepository {
+    -db: FirebaseFirestore
+  }
+  class FirestoreRideTxContext $CHG {
+    $N-db: FirebaseFirestore$E
+    -tx: Transaction
+    $N-rideRef: DocumentReference$E
+    $N-writes: List<Write>$E
+    $N-ride: Ride$E
+    $N~flush(): void$E
+  }
+  class NetworkMonitor <<new>> $NEW {
+    $N+isOnline(): boolean$E
+  }
+  class FirestoreMapper <<utility, new>> $NEW {
+    $N~toMap(entity): Map$E
+    $N~toUser / toRide / toRequest(doc)$E
+  }
+  class FirestorePaths <<utility, new>> $NEW {
+    $N~USERS, USC_IDS, RIDES, ...$E
+    $N~flagId(rideId, userId)$E
+  }
+  class FirestoreErrors <<utility, new>> $NEW {
+    $N~map(e: Exception): AppException$E
+    $N~TxAbort (nested exception)$E
+  }
+}
+
+FirestoreUserRepository -[hidden]right-> FirestoreRideRepository
+FirestoreRideRepository -[hidden]right-> FirestoreJoinRequestRepository
+FirestoreUserRepository -[#1B7F3B]down-> NetworkMonitor
+FirestoreRideRepository -[#1B7F3B]down-> NetworkMonitor
+FirestoreRideRepository .down.> FirestoreRideTxContext : creates
+NetworkMonitor -[hidden]down-> FirestoreMapper
+FirestoreRideTxContext -[hidden]down-> FirestorePaths
+FirestoreMapper -[hidden]right-> FirestorePaths
+FirestorePaths -[hidden]right-> FirestoreErrors
+note bottom of FirestoreMapper
+  Each class implements its interface in Figure 5.3a.
+  <color:#1B7F3B>All Firestore classes use the mapper, paths and errors helpers.</color>
+  <color:#1B7F3B>Writes are buffered and applied by flush() after the rule passes;</color>
+  <color:#1B7F3B>reads come from the server, and offline writes fail fast.</color>
+end note
+$legend()
+@enduml

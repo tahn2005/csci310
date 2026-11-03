@@ -1,0 +1,32 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-2 Create a Ride Post (part 1 of 2): choosing places
+autonumber
+actor Organizer
+participant ":CreateRide\nFragment" as F
+participant ":PlaceField" as PF #E6F4EA
+participant ":CreateRide\nViewModel" as VM
+participant ":Ride\nService" as RS
+participant ":Location\nGateway" as LG
+
+Organizer -> F : type origin
+F -[#1B7F3B]> PF : <color:#1B7F3B>text changed</color>\n<color:#1B7F3B>(350 ms debounce)</color>
+PF -> VM : <color:#B00020><s>searchPlaces(text)</s></color>\n<color:#1B7F3B>suggest(text)</color>
+VM -> RS : suggestPlaces(text)
+RS -> LG : suggest(text)
+LG --> RS : List<Place>
+RS --> VM : List<Place>
+VM --> PF : <color:#1B7F3B>suggestions</color>\n<color:#1B7F3B>(dropdown)</color>
+Organizer -> PF : pick a place
+PF -> VM : <color:#B00020><s>selectPlace(p, true)</s></color>\n<color:#1B7F3B>resolve(suggestion)</color>
+VM -> RS : <color:#B00020><s>getPlace(placeId)</s></color>\n<color:#1B7F3B>getPlace(suggestion)</color>
+alt <color:#1B7F3B>suggestion has lat/lng</color>\n<color:#1B7F3B>(OpenStreetMap, the default)</color>
+  RS -[#1B7F3B]-> VM : <color:#1B7F3B>suggestion</color>
+else no coordinates (Google Places)
+  RS -> LG : getPlace(placeId)
+  LG --> RS : place with lat/lng
+end
+note over F, LG : the destination is picked the same way
+$seqlegend()
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-5 Ride History and Monthly Summary (part 1 of 2): history
+autonumber
+actor Student
+participant ":History\nFragment" as HF
+participant ":History\nViewModel" as VM
+participant ":RideHistory\nService" as HS
+participant ":FirestoreRide\nRepository" as RR
+
+Student -> HF : open History,\nset filters
+HF -[#1B7F3B]> HF : <color:#1B7F3B>PlaceField.resolveTyped()</color>\n<color:#1B7F3B>for origin / destination</color>
+HF -> VM : loadHistory(filter)
+VM -[#1B7F3B]> HS : <color:#1B7F3B>getHistory(no filter), then</color>\n<color:#1B7F3B>participantsOf(all) for</color>\n<color:#1B7F3B>the "rode with" filter</color>
+VM -> HS : getHistory(filter)
+HS -> RR : getRidesOf(me)
+RR --> HS : rides <color:#1B7F3B>(with</color>\n<color:#1B7F3B>embedded shares)</color>
+HS -> RR : <color:#B00020><s>getSharesOf(me)</s></color>
+RR --> HS : <color:#B00020><s>shares</s></color>
+HS -> HS : keep Completed and\nCancelled, apply filter,\nnewest first<color:#1B7F3B>; myShare =</color>\n<color:#1B7F3B>ride.shareOf(me)</color>
+HS --> VM : entries
+alt no entries
+  VM --> HF : <color:#B00020><s>"No rides match"</s></color>
+  HF --> Student : <color:#1B7F3B>"No rides in your history</color>\n<color:#1B7F3B>match these filters..."</color>
+else
+  VM --> HF : entries
+  HF --> Student : rides with my share\nand Paid / Unpaid
+end
+$seqlegend()
+@enduml

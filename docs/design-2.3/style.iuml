@@ -1,0 +1,62 @@
+skinparam dpi 200
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 13
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam ArrowColor #333333
+skinparam nodesep 25
+skinparam ranksep 35
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  HeaderBackgroundColor #F3E5E5
+}
+skinparam package {
+  BackgroundColor #FCFCFC
+  BorderColor #990000
+  FontColor #990000
+  FontStyle bold
+}
+skinparam note {
+  BackgroundColor #FFFBEA
+  BorderColor #B8A040
+}
+skinparam sequence {
+  LifeLineBorderColor #777777
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantBorderColor #555555
+  ActorBorderColor #555555
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #990000
+  GroupHeaderFontColor #990000
+}
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 150
+hide footbox
+hide circle
+set separator none
+
+' ---- 2.3 change markup ----
+' $N ... $E  = added or changed in 2.3 (green)
+' $D ... $DE = removed in 2.3 (red, struck through)
+!$N = "<color:#1B7F3B>"
+!$E = "</color>"
+!$D = "<color:#B00020><s>"
+!$DE = "</s></color>"
+!$NEW = "#E6F4EA"
+!$CHG = "#FFF6D5"
+skinparam legendBackgroundColor #FFFFFF
+skinparam legendBorderColor #999999
+skinparam legendFontSize 11
+!procedure $legend()
+legend bottom right
+  <back:#E6F4EA>   </back> new class in 2.3    <back:#FFF6D5>   </back> class changed in 2.3
+  <color:#1B7F3B>green</color> = added/changed member    <color:#B00020><s>red</s></color> = removed
+endlegend
+!endprocedure
+!procedure $seqlegend()
+legend bottom right
+  <color:#1B7F3B>green</color> = new or changed step in 2.3    <color:#B00020><s>red</s></color> = removed from 2.2
+endlegend
+!endprocedure

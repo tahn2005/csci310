@@ -1,0 +1,43 @@
+@startuml
+!include style.iuml
+
+package "Shared Presentation Helpers (ui.common): base classes" {
+  abstract class BaseViewModel <<new>> $NEW {
+    $N#busy: MutableLiveData<Boolean>$E
+    $N#error: MutableLiveData<Event<AppException>>$E
+    $N#message: MutableLiveData<Event<String>>$E
+    $N#app(): AppContainer$E
+    $N+busy() / error() / message(): LiveData$E
+    $N#say(text: String): void$E
+    $N#call(onSuccess: Consumer<T>): Callback<T>$E
+  }
+  abstract class BaseFragment <<new>> $NEW {
+    $N#{abstract} title(): String$E
+    $N#main(): MainActivity$E
+    $N#app(): AppContainer$E
+    $N#push(f: Fragment): void$E
+    $N#toast(text: String): void$E
+    $N#observeCommon(vm: BaseViewModel, progress: View): void$E
+    $N#onFieldErrors(errors: Map<String,String>): boolean$E
+    $N#{static} clearErrorOnEdit(layouts...): void$E
+    $N#confirm(title, message, positive, onYes: Runnable): void$E
+  }
+  class "Event<T>" as Event <<new>> $NEW {
+    $N-content: T$E
+    $N-handled: boolean$E
+    $N+take(): T$E
+    $N+peek(): T$E
+  }
+}
+class "AndroidViewModel" as AVM <<AndroidX>>
+class "Fragment" as Frag <<AndroidX>>
+BaseViewModel -[#1B7F3B]up-|> AVM
+BaseFragment -[#1B7F3B]up-|> Frag
+BaseViewModel .[#1B7F3B]down.> Event
+BaseFragment .[#1B7F3B]left.> BaseViewModel : <color:#1B7F3B>observes</color>
+note bottom of Event
+  <color:#1B7F3B>Every ViewModel in Figures 5.9-5.12 extends BaseViewModel;</color>
+  <color:#1B7F3B>every Fragment extends BaseFragment.</color>
+end note
+$legend()
+@enduml

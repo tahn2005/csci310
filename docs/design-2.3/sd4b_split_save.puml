@@ -1,0 +1,36 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-4 Complete a Ride and Split the Cost (part 2 of 2): saving
+autonumber 15
+actor Organizer
+participant ":CostSplit\nFragment" as F
+participant ":CostSplit\nViewModel" as VM
+participant ":CostSplit\nService" as CS
+participant "s:\nEqualSplit" as ES
+participant ":FirestoreRide\nRepository" as RR
+
+Organizer -> F : tap Save Cost Split
+F -[#1B7F3B]> Organizer : <color:#1B7F3B>confirm dialog</color>\n<color:#1B7F3B>listing every share</color>
+F -> VM : <color:#B00020><s>save()</s></color> <color:#1B7F3B>save(s)</color>
+VM -> CS : completeRide(rideId,\n4700, s)
+CS -> RR : runTransaction(rideId, t)
+alt offline
+  RR --> CS : OFFLINE error
+  CS --> VM : OFFLINE error
+  VM --> F : show error; ride not\nCompleted <color:#1B7F3B>(Save re-enabled)</color>
+else online
+  RR -> CS : t.apply(ctx)
+  CS -[#1B7F3B]> CS : <color:#1B7F3B>completeBlockReason():</color>\n<color:#1B7F3B>organizer, departed,</color>\n<color:#1B7F3B>not ended</color>
+  CS -> ES : split(4700, riders)
+  ES --> CS : shares
+  CS -> CS : organizer share PAID,\nride COMPLETED<color:#1B7F3B>,</color>\n<color:#1B7F3B>splitMethod, capacity N/A</color>
+  CS -> RR : putShares, <color:#B00020><s>putRide,</s></color>\n<color:#B00020><s>rejectPending</s></color> <color:#1B7F3B>rejectPending,</color>\n<color:#1B7F3B>putRide</color> (ctx)
+  RR -> RR : <color:#1B7F3B>flush(),</color> commit
+  RR --> CS : <color:#B00020><s>ok</s></color> <color:#1B7F3B>ride</color>
+  CS --> VM : <color:#B00020><s>ok</s></color> <color:#1B7F3B>ride</color>
+  VM --> F : <color:#B00020><s>show shares</s></color>\n<color:#1B7F3B>saved (Event)</color>
+  F -[#1B7F3B]> F : <color:#1B7F3B>back() to Ride Detail,</color>\n<color:#1B7F3B>which shows the shares</color>
+end
+$seqlegend()
+@enduml

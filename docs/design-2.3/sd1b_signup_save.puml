@@ -1,0 +1,30 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-1 Sign Up (part 2 of 2): saving the profile
+autonumber 16
+actor Student
+participant ":SignUp\nFragment" as F
+participant ":Auth\nViewModel" as VM
+participant ":Account\nService" as AS
+participant ":FirebaseAuth\nGateway" as AG
+participant ":FirestoreUser\nRepository" as UR
+
+AS -> UR : createUser(user)\n(also reserves USC ID)
+UR -[#1B7F3B]> UR : <color:#1B7F3B>NetworkMonitor.isOnline();</color>\n<color:#1B7F3B>transaction writes</color>\n<color:#1B7F3B>uscIds/{id} + users/{uid}</color>
+alt USC ID already used <color:#1B7F3B>or any save error</color>
+  UR --> AS : DUPLICATE <color:#1B7F3B>(or other)</color> error
+  AS -> AG : deleteAccount()
+  AS -[#1B7F3B]> AG : <color:#1B7F3B>signOut()</color>
+  AS --> VM : DUPLICATE error\n<color:#1B7F3B>on the USC ID field</color>
+  VM --> F : error
+  F --> Student : <color:#1B7F3B>"An account with this</color>\n<color:#1B7F3B>USC ID already exists."</color>
+else saved
+  UR --> AS : ok
+  AS -[#1B7F3B]> AS : <color:#1B7F3B>session.set(user)</color>
+  AS --> VM : user
+  VM --> F : user <color:#1B7F3B>(Event)</color>
+  F --> Student : open Search tab\n<color:#1B7F3B>via MainActivity</color>\n<color:#1B7F3B>.onSignedIn()</color>
+end
+$seqlegend()
+@enduml

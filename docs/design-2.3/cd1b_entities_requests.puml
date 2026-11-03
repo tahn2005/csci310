@@ -1,0 +1,79 @@
+@startuml
+!include style.iuml
+
+package "Domain Model & Utilities: requests, shares, statuses" {
+  class JoinRequest $CHG {
+    $N+{static} MAX_MESSAGE_LENGTH = 200$E
+    -requestId: String
+    -rideId: String
+    -requesterId: String
+    -requesterName: String
+    $N-organizerId: String$E
+    -message: String
+    -createdAt: Instant
+    $N-respondedAt: Instant$E
+    -status: RequestStatus
+    $N-ride: Ride (transient)$E
+  }
+  class CostShare $CHG {
+    -rideId: String
+    -userId: String
+    $N-displayName: String$E
+    -amountCents: long
+    -status: PaymentStatus
+    $N-paidAt: Instant$E
+    $N+isPaid(): boolean$E
+    $N+copy(): CostShare$E
+  }
+  class NonPaymentFlag $CHG {
+    -rideId: String
+    -userId: String
+    -organizerId: String
+    $N-rideTitle: String$E
+    $N-userName, organizerName: String$E
+    $N-amountCents: long$E
+    $N-createdAt: Instant$E
+  }
+  enum ActivityStatus <<enum>> $CHG {
+    ON_TIME
+    DELAYED
+    CANCELLED
+    COMPLETED
+    $N+label(): String$E
+    $N+isActive(): boolean$E
+    $N+{static} fromName(n: String)$E
+  }
+  enum CapacityStatus <<enum>> $CHG {
+    OPEN
+    FULL
+    NOT_APPLICABLE
+    $N+label(): String$E
+    $N+{static} fromName(n: String)$E
+  }
+  enum RequestStatus <<enum>> $CHG {
+    PENDING
+    ACCEPTED
+    REJECTED
+    $N+label(): String$E
+    $N+{static} fromName(n: String)$E
+  }
+  enum PaymentStatus <<enum>> $CHG {
+    UNPAID
+    PAID
+    $N+label(): String$E
+    $N+{static} fromName(n: String)$E
+  }
+}
+
+JoinRequest -down-> RequestStatus
+CostShare -down-> PaymentStatus
+NonPaymentFlag "0..1" -up-> "1" CostShare : flags >
+JoinRequest -[hidden]right-> CostShare
+RequestStatus -[hidden]down-> ActivityStatus
+PaymentStatus -[hidden]down-> NonPaymentFlag
+ActivityStatus -[hidden]right-> CapacityStatus
+note bottom of NonPaymentFlag
+  <color:#1B7F3B>Stored with document id rideId_userId.</color>
+end note
+$legend()
+@enduml

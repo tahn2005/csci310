@@ -1,0 +1,49 @@
+@startuml
+!include style.iuml
+
+package "Navigation Shell" {
+  class TrojanRideshareApp <<Application, new>> $NEW {
+    $N-container: AppContainer$E
+    $N+onCreate(): void$E
+    $N+container(): AppContainer$E
+  }
+  class MainActivity <<Activity>> $CHG {
+    $D-nav: BottomNavigationView$DE
+    $N-b: ActivityMainBinding$E
+    $N-app: AppContainer$E
+    +onCreate(b: Bundle): void
+    $N+showLogIn(): void$E
+    $N+onSignedIn(): void$E
+    $N+logOut(): void$E
+    $N+push(f: Fragment): void$E
+    $N+replaceTop(f: Fragment): void$E
+    $N+back(): void$E
+    $N+switchToTab(itemId: int): void$E
+    $N-restoreSession(): void$E
+  }
+  class AppContainer $CHG {
+    +account: AccountService
+    +rides: RideService
+    +search: RideSearchEngine
+    +joins: JoinRequestService
+    +costs: CostSplitService
+    +history: RideHistoryService
+    $N+clock: DeviceClock$E
+    $N+session: Session$E
+    $N+backendLabel: String$E
+    $N+locationLabel: String$E
+    $N+setClockOffset(offset: Duration): void$E
+    $N-{static} firebaseApp(c: Context): FirebaseApp$E
+  }
+}
+
+TrojanRideshareApp *-[#1B7F3B]down- AppContainer
+MainActivity -[#1B7F3B]down-> AppContainer
+note bottom of AppContainer
+  <color:#B00020><s>MainActivity *-- AppContainer</s></color>
+  <color:#1B7F3B>The Application object owns the container so it survives rotation.</color>
+  <color:#1B7F3B>MainActivity restores the session at start-up, and after Android</color>
+  <color:#1B7F3B>kills the process it starts fresh instead of restoring stale screens.</color>
+end note
+$legend()
+@enduml

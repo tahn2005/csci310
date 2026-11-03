@@ -1,0 +1,24 @@
+@startuml
+!include style.iuml
+
+package "Ride History Service" {
+  class RideHistoryService $CHG {
+    -rides: RideRepository
+    -clock: Clock
+    $N-session: Session$E
+    +getHistory(f: HistoryFilter): List<HistoryEntry>
+    +getUpcoming(): List<Ride>
+    $N+getPublicRides(u: User): List<Ride>$E
+    +getMonthlySummary(m: YearMonth): MonthlySummary
+    $N+currentMonth(): YearMonth$E
+    $N+{static} participantsOf(entries, uid): List<RideMember>$E
+    $N~{static} filter(all, f, uid): List<HistoryEntry>$E
+    $N~{static} summarize(all, m, uid): MonthlySummary$E
+  }
+}
+interface RideRepository <<interface>>
+class Session
+RideHistoryService --> RideRepository
+RideHistoryService -[#1B7F3B]-> Session
+$legend()
+@enduml

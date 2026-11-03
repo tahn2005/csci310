@@ -1,0 +1,35 @@
+@startuml
+!include style.iuml
+
+package "Cost Split UI" {
+  class CostSplitFragment <<Fragment>> $CHG {
+    $N+{static} newInstance(rideId: String): CostSplitFragment$E
+  }
+  class CostSplitViewModel <<ViewModel>> $CHG {
+    $D-costs: CostSplitService$DE
+    $N-cents: long$E
+    $N+ride: LiveData<Ride>$E
+    +preview: LiveData<List<CostShare>>
+    $D+error: LiveData<String>$DE
+    $N+problem: LiveData<String>$E
+    $N+saved: LiveData<Event<Ride>>$E
+    $N+load(rideId: String): void$E
+    $D+updatePreview(cost: String, s: SplitStrategy): void$DE
+    $N+updatePreview(cost: String, s: SplitStrategy,$E\n$N    inputProblem: String): void$E
+    $D+save(): void$DE
+    $N+save(s: SplitStrategy): void$E
+    $D+markPaid(): void$DE
+    $D+flag(userId: String): void$DE
+  }
+}
+class EqualSplit
+class CustomSplit
+CostSplitFragment --> CostSplitViewModel
+CostSplitFragment .[#1B7F3B].> EqualSplit : <color:#1B7F3B>creates</color>
+CostSplitFragment .[#1B7F3B].> CustomSplit : <color:#1B7F3B>creates</color>
+note bottom of CostSplitViewModel
+  <color:#1B7F3B>markPaid() and flag() moved to RideDetailViewModel:</color>
+  <color:#1B7F3B>riders pay and organizers flag from the Ride Detail page.</color>
+end note
+$legend()
+@enduml

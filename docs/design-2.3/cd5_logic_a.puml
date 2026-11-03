@@ -1,0 +1,99 @@
+@startuml
+!include style.iuml
+
+package "Account Service" {
+  class AccountService $CHG {
+    $N+{static} F_FULL_NAME, F_NICKNAME, F_EMAIL,$E\n$N    F_USC_ID, F_PASSWORD, F_GRAD_YEAR: String$E
+    $N+{static} MAX_YEARS_AHEAD = 6, MIN_PASSWORD_LENGTH = 6$E
+    -auth: AuthGateway
+    -users: UserRepository
+    -clock: Clock
+    $N-session: Session$E
+    $D+validate(u: User): List<String>$DE
+    $N+validate(u: User, pw: String): Map<String,String>$E
+    $N+activeGradYears(): int[]$E
+    +signUp(u: User, pw: String): User
+    +logIn(email: String, pw: String): User
+    $N+restoreSession(): User$E
+    $N+hasSavedLogin(): boolean$E
+    +logOut(): void
+    $N+currentUser(): User$E
+    $N+getUser(uid: String): User$E
+    $D+updateNickname(name: String): void$DE
+    $N+updateNickname(name: String): User$E
+    $D+setRidePublic(rideId: String, on: boolean): void$DE
+    $N+setRidePublic(rideId: String, on: boolean): User$E
+    $N+{static} normalizeEmail(email: String): String$E
+  }
+}
+
+package "Ride Service" {
+  class RideService $CHG {
+    $N+{static} F_TITLE, F_ORIGIN, F_DESTINATION,$E\n$N    F_DEPARTURE, F_MAX_RIDERS, F_COST, F_NOTE$E
+    -rides: RideRepository
+    -places: LocationGateway
+    -clock: Clock
+    $N-session: Session$E
+    +suggestPlaces(query: String): List<Place>
+    $D+getPlace(placeId: String): Place$DE
+    $N+getPlace(suggestion: Place): Place$E
+    $D+validate(r: Ride): List<String>$DE
+    $N+validate(r: Ride): Map<String,String>$E
+    +createRide(r: Ride): Ride
+    +getRide(rideId: String): Ride
+    $N+editBlockReason(r: Ride): String$E
+    $D+updateDeparture(id, t, s): void$DE
+    $N+validateEdit(changes: Ride): Map<String,String>$E
+    $N+editRide(id: String, changes: Ride,$E\n$N    s: ActivityStatus): Ride$E
+    $D+cancelRide(rideId: String): void$DE
+    $N+cancelRide(rideId: String): Ride$E
+    $N+syncDisplayName(): void$E
+    $N~{static} renameIn(r: Ride, uid, name): boolean$E
+  }
+}
+
+package "Ride Search Engine" {
+  class RideSearchEngine $CHG {
+    -rides: RideRepository
+    -clock: Clock
+    $N-session: Session$E
+    -cache: List<Ride>
+    +refresh(): void
+    +search(c: SearchCriteria): List<Ride>
+    $N+isJoined(r: Ride): boolean$E
+    $D-matches(r: Ride, c: SearchCriteria): boolean$DE
+    $N~matches(r: Ride, c: SearchCriteria): boolean$E
+    $D-proximity(r: Ride, c: SearchCriteria): double$DE
+    $N~proximity(r: Ride, c: SearchCriteria): double$E
+    $N~{static} minutesFromTarget(r, c): double$E
+    $N-comparator(c: SearchCriteria): Comparator<Ride>$E
+  }
+}
+
+package "Session (shared by all services)" as SP {
+  class Session <<new>> $NEW {
+    $N-user: User$E
+    $N+user(): User$E
+    $N+uid(): String$E
+    $N+displayName(): String$E
+    $N+isSignedIn(): boolean$E
+    $N~set(u: User): void$E
+    $N~clear(): void$E
+  }
+}
+
+interface AuthGateway <<interface>>
+interface UserRepository <<interface>>
+interface RideRepository <<interface>>
+interface LocationGateway <<interface>>
+
+AccountService --> AuthGateway
+AccountService --> UserRepository
+RideService -up-> RideRepository
+RideService --> LocationGateway
+RideSearchEngine --> RideRepository
+AccountService -[#1B7F3B]-> Session : <color:#1B7F3B>sets / clears</color>
+RideService -[#1B7F3B]-> Session
+RideSearchEngine -[#1B7F3B]-> Session
+$legend()
+@enduml

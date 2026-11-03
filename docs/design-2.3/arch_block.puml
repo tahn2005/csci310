@@ -1,0 +1,76 @@
+@startuml
+!include style.iuml
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+}
+skinparam defaultTextAlignment center
+skinparam nodesep 18
+skinparam ranksep 40
+top to bottom direction
+
+rectangle "Presentation layer (MVVM: Fragments + ViewModels)" as P #FCFCFC {
+  rectangle "Navigation Shell\n<color:#1B7F3B>+ TrojanRideshareApp</color>" as NS $CHG
+  rectangle "Account &\nProfile UI" as APU
+  rectangle "Ride Post UI" as RPU
+  rectangle "Search &\nRequests UI" as SRU
+  rectangle "Cost Split UI" as CSU
+  rectangle "History &\nSummary UI" as HSU
+  rectangle "<color:#1B7F3B>Shared Presentation</color>\n<color:#1B7F3B>Helpers (ui.common)</color>" as UC $NEW
+}
+
+rectangle "Application Logic layer (plain Java, unit-tested)" as L #FCFCFC {
+  rectangle "Account\nService" as AS
+  rectangle "Ride\nService" as RS
+  rectangle "Ride Search\nEngine" as SE
+  rectangle "Join Request\nService" as JS
+  rectangle "Cost Split\nService" as CS
+  rectangle "Ride History\nService" as HS
+  rectangle "<color:#1B7F3B>Session</color>" as SS $NEW
+}
+
+rectangle "Data Access layer" as D #FCFCFC {
+  rectangle "Repositories\n<color:#1B7F3B>+ NetworkMonitor</color>" as REPO $CHG
+  rectangle "Auth Gateway" as AG
+  rectangle "Location Gateway\n<color:#1B7F3B>OpenStreetMap (default)</color>\nGoogle Places <color:#1B7F3B>(optional)</color>" as LG $CHG
+}
+
+rectangle "Domain Model & Utilities (used by every layer)\n<color:#1B7F3B>+ DeviceClock (demo clock)</color>" as DM $CHG
+
+rectangle "Cloud / external services" as C #FCFCFC {
+  rectangle "Cloud Firestore\n+ Security Rules\n<color:#1B7F3B>(rename, edit-ride</color>\n<color:#1B7F3B>and role checks)</color>" as FS $CHG
+  rectangle "Firebase\nAuthentication" as FA
+  rectangle "<color:#1B7F3B>Photon geocoder</color>\n<color:#1B7F3B>(OpenStreetMap)</color>" as PH $NEW
+  rectangle "Google Places API\n<color:#1B7F3B>(optional)</color>" as GP $CHG
+}
+
+rectangle "<color:#1B7F3B>Firebase Local Emulator Suite</color>\n<color:#1B7F3B>(used instead of the cloud when there is</color>\n<color:#1B7F3B>no google-services.json: development / demo)</color>" as EMU $NEW
+
+' two rows inside the wide layers
+NS -[hidden]right- APU
+APU -[hidden]right- RPU
+RPU -[hidden]right- SRU
+NS -[hidden]down- CSU
+CSU -[hidden]right- HSU
+HSU -[hidden]right- UC
+AS -[hidden]right- RS
+RS -[hidden]right- SE
+SE -[hidden]right- JS
+AS -[hidden]down- CS
+CS -[hidden]right- HS
+HS -[hidden]right- SS
+
+' layer order: link components inside the layers so the layers stack vertically
+HSU -down-> SE : service calls (results via LiveData)
+CSU -[hidden]down- AS
+HS -down-> LG : data requests (Callback<T>)
+CS -[hidden]down- REPO
+REPO -[hidden]down- DM
+DM -[hidden]down- FS
+REPO -down-> FS : HTTPS, transactions
+AG -down-> FA
+LG -down-> PH
+LG -down-> GP
+FS -[hidden]down- EMU
+$legend()
+@enduml

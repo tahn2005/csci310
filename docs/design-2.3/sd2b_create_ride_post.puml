@@ -1,0 +1,36 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-2 Create a Ride Post (part 2 of 2): posting
+autonumber 15
+actor Organizer
+participant ":CreateRide\nFragment" as F
+participant ":CreateRide\nViewModel" as VM
+participant ":Ride\nService" as RS
+participant ":FirestoreRide\nRepository" as RR
+
+Organizer -> F : fill other fields,\ntap Post Ride
+F -[#1B7F3B]> F : <color:#1B7F3B>build Ride;</color>\n<color:#1B7F3B>Money.parse(cost)</color>
+F -> VM : post(ride<color:#1B7F3B>, costError</color>)
+VM -[#1B7F3B]> RS : <color:#1B7F3B>validate(ride)</color>\n<color:#1B7F3B>(pre-check)</color>
+alt a field is invalid
+  RS --> VM : <color:#1B7F3B>field errors</color>
+  VM --> F : highlight fields,\nkeep values
+else valid
+  VM -> RS : createRide(ride)
+  RS -> RS : validate(ride); On-Time,\nOpen, organizer = first\nrider <color:#1B7F3B>(from Session)</color>
+  RS -> RR : createRide(ride)
+  alt offline
+    RR -[#1B7F3B]> RR : <color:#1B7F3B>NetworkMonitor</color>\n<color:#1B7F3B>.isOnline() = false</color>
+    RR --> RS : OFFLINE error
+    RS --> VM : OFFLINE error
+    VM --> F : show error,\nkeep values
+  else saved
+    RR --> RS : ride with id
+    RS --> VM : ride
+    VM --> F : <color:#1B7F3B>posted (Event)</color>
+    F -[#1B7F3B]> F : <color:#1B7F3B>replaceTop(</color>\n<color:#1B7F3B>RideDetail)</color>
+  end
+end
+$seqlegend()
+@enduml

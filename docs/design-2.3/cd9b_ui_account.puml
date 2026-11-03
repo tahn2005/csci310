@@ -1,0 +1,49 @@
+@startuml
+!include style.iuml
+
+package "Account & Profile UI" {
+  class SignUpFragment <<Fragment>>
+  class LogInFragment <<Fragment>>
+  class AuthViewModel <<ViewModel>> $CHG {
+    $D-account: AccountService$DE
+    $D+user: LiveData<User>$DE
+    $N+user: LiveData<Event<User>>$E
+    $D+error: LiveData<String>$DE
+    +signUp(u: User, pw: String): void
+    +logIn(email: String, pw: String): void
+    $N+activeGradYears(): int[]$E
+    $N+backendLabel(): String$E
+  }
+  class ProfileFragment <<Fragment>> $CHG {
+    $N+{static} forMe(): ProfileFragment$E
+    $N+{static} forUser(uid: String): ProfileFragment$E
+  }
+  class ProfileViewModel <<ViewModel>> $CHG {
+    $D-account: AccountService$DE
+    $D-history: RideHistoryService$DE
+    +user: LiveData<User>
+    $D+rides: LiveData<List<Ride>>$DE
+    $N+upcoming: LiveData<List<Ride>>$E
+    $N+completed: LiveData<List<HistoryEntry>>$E
+    $N+publicRides: LiveData<List<Ride>>$E
+    $N+flags: LiveData<List<NonPaymentFlag>>$E
+    +load(uid: String): void
+    $N+reload(): void$E
+    $N+isMe(): boolean$E
+    +saveNickname(name: String): void
+    +setRidePublic(id: String, on: boolean): void
+    $N+logOut(): void$E
+    $N+shiftClock(d: Duration): void$E
+  }
+}
+
+SignUpFragment -down-> AuthViewModel
+LogInFragment -down-> AuthViewModel
+ProfileFragment -down-> ProfileViewModel
+note bottom of AuthViewModel
+  <color:#1B7F3B>ViewModels extend BaseViewModel and reach services</color>
+  <color:#1B7F3B>through AppContainer; Fragments extend BaseFragment.</color>
+  <color:#1B7F3B>saveNickname() also syncs the new name to requests and rides.</color>
+end note
+$legend()
+@enduml

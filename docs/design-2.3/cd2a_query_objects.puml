@@ -1,0 +1,56 @@
+@startuml
+!include style.iuml
+
+package "Domain Model & Utilities: query objects" {
+  class SearchCriteria $CHG {
+    $N+{static} DEFAULT_RADIUS = 5, MIN 0.5, MAX 50 (miles)$E
+    $N+{static} MIN_WINDOW_HOURS = 0.5, MAX 6$E
+    -origin: Place
+    -destination: Place
+    -radiusMiles: double = 5 $N(clamped)$E
+    -date: LocalDate
+    -targetTime: LocalTime
+    -windowHours: double $N= 1 (clamped)$E
+    -seatsOnly: boolean = true
+    -sort: SortOption
+    +hasLocation(): boolean
+    $N+copy(): SearchCriteria$E
+  }
+  enum SortOption <<enum>> $CHG {
+    TIME_EARLIEST
+    TIME_LATEST
+    PROXIMITY
+    PROXIMITY_THEN_TIME
+    $N+label(): String$E
+    $N+needsLocation(): boolean$E
+  }
+  class HistoryFilter $CHG {
+    -origin: Place
+    -destination: Place
+    -radiusMiles: double
+    -status: ActivityStatus
+    -participantId: String
+    -newestFirst: boolean = true
+    $N+hasLocation(): boolean$E
+  }
+  class HistoryEntry {
+    -ride: Ride
+    -myShare: CostShare
+  }
+  class MonthlySummary $CHG {
+    $N-month: YearMonth$E
+    -completedRides: int
+    -totalCostCents: long
+    -organizedCount: int
+    -joinedCount: int
+    $N-rides: List<HistoryEntry>$E
+    +hasActivity(): boolean
+  }
+}
+
+SearchCriteria -down-> SortOption
+HistoryFilter -[hidden]down-> HistoryEntry
+MonthlySummary o-[#1B7F3B]down- "0..*" HistoryEntry : <color:#1B7F3B>rides</color>
+SearchCriteria -[hidden]right-> HistoryFilter
+$legend()
+@enduml

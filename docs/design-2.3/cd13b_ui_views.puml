@@ -1,0 +1,42 @@
+@startuml
+!include style.iuml
+
+package "Shared Presentation Helpers (ui.common): views and formatting" {
+  class PlaceField <<new>> $NEW {
+    $N-source: Source$E
+    $N-selected: Place$E
+    $N-{static} DEBOUNCE_MS = 350$E
+    $N+getSelected(): Place$E
+    $N+setOnChange(c: Consumer<Place>): void$E
+    $N+resolveTyped(): Place$E
+    $N+setError(msg: String): void$E
+  }
+  interface "PlaceField.Source" as Source <<interface, new>> $NEW {
+    $N+suggest(query: String): List<Place>$E
+    $N+resolve(suggestion: Place): Place$E
+  }
+  class "RideAdapter<T>" as RideAdapter <<new>> $NEW {
+    $N+{static} forRides(decorator, onClick): RideAdapter<Ride>$E
+    $N+submit(list: List<T>): void$E
+  }
+  class RideViews <<utility, new>> $NEW {
+    $N+{static} bind(b, r: Ride): void$E
+  }
+  class StatusStyle <<utility, new>> $NEW {
+    $N+{static} activity / capacity / request / payment(...)$E
+  }
+  class UiFormat <<utility, new>> $NEW {
+    $N+{static} date / time / dateTime / route / miles(...)$E
+  }
+}
+PlaceField -[#1B7F3B]down-> Source
+RideAdapter .[#1B7F3B]down.> RideViews
+RideViews .[#1B7F3B]down.> StatusStyle
+RideViews .[#1B7F3B]down.> UiFormat
+PlaceField -[hidden]right-> RideAdapter
+note bottom of Source
+  <color:#1B7F3B>Implemented by CreateRideViewModel,</color>
+  <color:#1B7F3B>RideSearchViewModel and HistoryViewModel.</color>
+end note
+$legend()
+@enduml

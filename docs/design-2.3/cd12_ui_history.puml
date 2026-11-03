@@ -1,0 +1,30 @@
+@startuml
+!include style.iuml
+
+package "History & Summary UI" {
+  class HistoryFragment <<Fragment>>
+  class MonthlySummaryFragment <<Fragment>>
+  class HistoryViewModel <<ViewModel>> $CHG {
+    $D-history: RideHistoryService$DE
+    $N-filter: HistoryFilter$E
+    +entries: LiveData<List<HistoryEntry>>
+    $N+participants: LiveData<List<RideMember>>$E
+    +summary: LiveData<MonthlySummary>
+    +loadHistory(f: HistoryFilter): void
+    $N+reload(): void$E
+    +loadSummary(m: YearMonth): void
+    $N+currentMonth(): YearMonth$E
+    $N+suggest(query: String): List<Place>$E
+    $N+resolve(suggestion: Place): Place$E
+  }
+}
+interface "PlaceField.Source" as Source <<interface>>
+HistoryFragment --> HistoryViewModel
+MonthlySummaryFragment --> HistoryViewModel
+HistoryViewModel .[#1B7F3B].|> Source
+note bottom of MonthlySummaryFragment
+  <color:#1B7F3B>Opened from a button on History; each Fragment</color>
+  <color:#1B7F3B>gets its own HistoryViewModel instance.</color>
+end note
+$legend()
+@enduml

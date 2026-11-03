@@ -1,0 +1,30 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-5 Ride History and Monthly Summary (part 2 of 2): monthly summary
+autonumber 16
+actor Student
+participant ":History\nFragment" as HF
+participant ":MonthlySummary\nFragment" as MF
+participant ":History\nViewModel" as VM
+participant ":RideHistory\nService" as HS
+participant ":FirestoreRide\nRepository" as RR
+
+Student -[#1B7F3B]> HF : <color:#1B7F3B>tap Monthly Summary</color>
+HF -[#1B7F3B]> MF : <color:#1B7F3B>push (with its own</color>\n<color:#1B7F3B>HistoryViewModel)</color>
+Student -> MF : pick October 2026
+MF -> VM : loadSummary(2026-10)
+VM -> HS : getMonthlySummary(m)
+HS -> RR : getRidesOf(me)<color:#B00020><s>,</s></color>\n<color:#B00020><s>getSharesOf(me)</s></color>
+RR --> HS : rides<color:#B00020><s>, shares</s></color>
+HS -> HS : count Completed rides in\nthe month, sum my shares,\norganized vs joined
+HS --> VM : summary <color:#1B7F3B>(+ month,</color>\n<color:#1B7F3B>list of rides)</color>
+alt no activity
+  VM --> MF : <color:#1B7F3B>hasActivity() = false</color>
+  MF --> Student : "No activity! Please\nselect another month."
+else
+  VM --> MF : summary
+  MF --> Student : totals <color:#1B7F3B>and the</color>\n<color:#1B7F3B>month's rides</color>
+end
+$seqlegend()
+@enduml

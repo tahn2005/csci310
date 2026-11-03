@@ -1,0 +1,84 @@
+@startuml
+!include style.iuml
+
+package "Domain Model & Utilities: rides and users" {
+  class User $CHG {
+    -uid: String
+    -fullName: String
+    -nickname: String
+    -email: String
+    -uscId: String
+    -gradYear: int
+    -publicRideIds: List<String>
+    +getDisplayName(): String
+    $N+isRidePublic(rideId: String): boolean$E
+  }
+  class Place $CHG {
+    -placeId: String
+    -name: String
+    $N-address: String$E
+    -lat: double
+    -lng: double
+    $N+hasCoordinates(): boolean$E
+    $N+label(): String$E
+  }
+  class RideMember {
+    -userId: String
+    -displayName: String
+    -acceptedAt: Instant
+  }
+  class Ride $CHG {
+    $N+{static} MIN_RIDERS = 2, MAX_RIDERS = 6$E
+    -rideId: String
+    -title: String
+    -organizerId: String
+    $N-organizerName: String$E
+    -origin: Place
+    -destination: Place
+    -departure: LocalDateTime
+    -maxRiders: int
+    -expectedCostCents: long
+    -actualCostCents: long
+    -note: String
+    -activityStatus: ActivityStatus
+    -capacityStatus: CapacityStatus
+    -members: List<RideMember>
+    $N-pendingRequests: Map<String,String>$E
+    $N-shares: Map<String,CostShare>$E
+    $N-splitMethod: String$E
+    $N-createdAt, completedAt: Instant$E
+    +riderCount(): int
+    $N+seatsLeft(): int$E
+    +isOrganizer(uid: String): boolean
+    +hasMember(uid: String): boolean
+    $N+member(uid: String): RideMember$E
+    +isActive(): boolean
+    $N+isFull(): boolean$E
+    $N+hasDeparted(now: LocalDateTime): boolean$E
+    +updateCapacity(): void $N(N/A when Completed or Cancelled)$E
+    $N+displayCapacity(): CapacityStatus$E
+    $N+capacityLabel(): String$E
+    $N+hasPendingRequestFrom(uid: String): boolean$E
+    $N+pendingRequestIdOf(uid: String): String$E
+    $N+successorAfter(leavingUid: String): RideMember$E
+    $N+shareOf(uid: String): CostShare$E
+    $N+getShares(): List<CostShare>$E
+  }
+  class "CostShare" as CS1
+  class "JoinRequest" as JR1
+}
+
+User "1" -- "0..*" Ride : organizes >
+Ride "1" *-- "1..6" RideMember : members
+Ride --> "2" Place : origin, destination
+Ride "1" *-[#1B7F3B]- "0..*" CS1 : <color:#1B7F3B>shares (stored in the ride)</color>
+Ride "1" o.[#1B7F3B]. "0..*" JR1 : <color:#1B7F3B>pendingRequests (ids)</color>
+User -[hidden]down-> Place
+note bottom of CS1
+  <color:#B00020><s>CostShare "0..*" --> "1" Ride</s></color>
+  <color:#1B7F3B>Shares live inside the ride document and</color>
+  <color:#1B7F3B>are created only when the ride is completed.</color>
+  See Figure 5.1b for CostShare and JoinRequest.
+end note
+$legend()
+@enduml

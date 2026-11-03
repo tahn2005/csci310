@@ -1,0 +1,47 @@
+@startuml
+!include style.iuml
+
+package "Auth Gateway" {
+  interface AuthGateway <<interface>> {
+    +createAccount(email, pw): String
+    +signIn(email, pw): String
+    +signOut(): void
+    +deleteAccount(): void
+    +currentUserId(): String
+  }
+  class FirebaseAuthGateway $CHG {
+    -auth: FirebaseAuth
+    $N-{static} map(e, signingUp): AppException$E
+  }
+}
+
+package "Location Gateway" {
+  interface LocationGateway <<interface>> {
+    +suggest(query: String): List<Place>
+    +getPlace(placeId: String): Place
+  }
+  class GooglePlacesGateway $CHG {
+    $N-{static} LA_BOUNDS$E
+    -client: PlacesClient
+    $N-token: AutocompleteSessionToken$E
+  }
+  class OpenStreetMapGateway <<new>> $NEW {
+    $N-{static} ENDPOINT = photon.komoot.io$E
+    $N-io: ExecutorService$E
+    $N-cache: Map<String,Place>$E
+    $N+suggest(query): List<Place>$E
+    $N+getPlace(placeId): Place$E
+    $N-{static} parse(json): List<Place>$E
+  }
+}
+
+FirebaseAuthGateway .up.|> AuthGateway
+GooglePlacesGateway .up.|> LocationGateway
+OpenStreetMapGateway .[#1B7F3B]up.|> LocationGateway
+FirebaseAuthGateway -[hidden]down-> LocationGateway
+note bottom of OpenStreetMapGateway
+  <color:#1B7F3B>Default (no API key needed). Google Places</color>
+  <color:#1B7F3B>is used only when places.apiKey is set.</color>
+end note
+$legend()
+@enduml

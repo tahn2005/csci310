@@ -1,0 +1,53 @@
+@startuml
+!include style.iuml
+
+package "Repositories: interfaces used by the services" {
+  interface UserRepository <<interface>> {
+    +createUser(u: User): void
+    +getUser(uid: String): User
+    +updateUser(u: User): void
+  }
+  interface JoinRequestRepository <<interface>> $CHG {
+    +getRequest(requestId: String): JoinRequest
+    +getRequestsBy(uid: String): List<JoinRequest>
+    $D+getPending(rideId: String)$DE
+    $N+getPending(rideId, organizerId)$E
+  }
+  interface RideRepository <<interface>> $CHG {
+    +createRide(r: Ride): Ride
+    +getRide(rideId: String): Ride
+    $D+getUpcomingRides(): List<Ride>$DE
+    $N+getUpcomingRides(now): List<Ride>$E
+    +getRidesOf(uid: String): List<Ride>
+    $N+getRidesByIds(ids): List<Ride>$E
+    +getSharesOf(uid: String): List<CostShare>
+    $N+getFlagsForRide(rideId, organizerId)$E
+    $N+getFlagsAgainst(uid): List<NonPaymentFlag>$E
+    $D+runTransaction(rideId, t): void$DE
+    $N+runTransaction<T>(rideId, t): T$E
+  }
+  interface "RideTransaction<T>" as RideTransaction <<interface>> $CHG {
+    $D+apply(ctx): void$DE
+    $N+apply(ctx): T throws AppException$E
+  }
+  interface RideTxContext <<interface>> $CHG {
+    +getRide(): Ride
+    +getRequest(requestId): JoinRequest
+    $N+newRequestId(): String$E
+    +putRide(r: Ride): void
+    +putRequest(q: JoinRequest): void
+    $N+deleteRequest(requestId): void$E
+    +rejectPending(): void
+    $N+reassignPending(newOrganizerId): void$E
+    +putShares(s: List<CostShare>): void
+    +putFlag(f: NonPaymentFlag): void
+    $N+removeFlag(userId: String): void$E
+  }
+}
+
+UserRepository -[hidden]down-> JoinRequestRepository
+UserRepository -[hidden]right-> RideRepository
+RideRepository .down.> RideTransaction : runs
+RideTransaction .down.> RideTxContext : uses
+$legend()
+@enduml

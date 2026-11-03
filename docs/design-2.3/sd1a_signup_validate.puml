@@ -1,0 +1,36 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-1 Sign Up (part 1 of 2): validation and account creation
+autonumber
+actor Student
+participant ":SignUp\nFragment" as F
+participant ":Auth\nViewModel" as VM
+participant ":Account\nService" as AS
+participant ":FirebaseAuth\nGateway" as AG
+
+Student -> F : fill form,\ntap Create Account
+F -> VM : signUp(user, pw)
+VM -> AS : signUp(user, pw)
+AS -[#1B7F3B]> AS : <color:#1B7F3B>trim fields,</color>\n<color:#1B7F3B>normalizeEmail()</color>
+AS -> AS : <color:#B00020><s>validate(user)</s></color>\n<color:#1B7F3B>validate(user, pw):</color>\n<color:#1B7F3B>Map<field, message></color>
+alt a field is invalid
+  AS --> VM : VALIDATION error\n<color:#1B7F3B>with fieldErrors</color>
+  VM --> F : error <color:#1B7F3B>(Event)</color>
+  F --> Student : error under\n<color:#1B7F3B>every invalid</color> field
+else all fields valid
+  AS -> AG : createAccount(email, pw)
+  alt email already used
+    AG --> AS : DUPLICATE error
+    AS --> VM : DUPLICATE\n<color:#1B7F3B>on the email field</color>
+    VM --> F : <color:#B00020><s>"Account already exists"</s></color>\n<color:#1B7F3B>"An account with this email</color>\n<color:#1B7F3B>already exists." under Email</color>
+  else <color:#1B7F3B>weak password / offline</color>
+    AG -[#1B7F3B]-> AS : <color:#1B7F3B>VALIDATION /</color>\n<color:#1B7F3B>OFFLINE error</color>
+    AS -[#1B7F3B]-> VM : <color:#1B7F3B>error</color>
+  else account created
+    AG --> AS : uid
+    note over AS : continues in part 2
+  end
+end
+$seqlegend()
+@enduml

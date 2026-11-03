@@ -1,0 +1,52 @@
+@startuml
+!include style.iuml
+
+package "Ride Post UI" {
+  class CreateRideFragment <<Fragment>>
+  class CreateRideViewModel <<ViewModel>> $CHG {
+    $D-rides: RideService$DE
+    $D+places: LiveData<List<Place>>$DE
+    $D+error: LiveData<String>$DE
+    $D+searchPlaces(text: String): void$DE
+    $D+selectPlace(p: Place, isOrigin: boolean): void$DE
+    $N+posted: LiveData<Event<Ride>>$E
+    $N+suggest(query: String): List<Place>$E
+    $N+resolve(suggestion: Place): Place$E
+    $D+post(r: Ride): void$DE
+    $N+post(r: Ride, costError: String): void$E
+  }
+  class RideDetailFragment <<Fragment>>
+  class RideDetailViewModel <<ViewModel>> $CHG {
+    $D-rides: RideService$DE
+    $D-joins: JoinRequestService$DE
+    +ride: LiveData<Ride>
+    $D+joinBlock: LiveData<String>$DE
+    $N+pending: LiveData<List<JoinRequest>>$E
+    $N+flags: LiveData<Map<String,NonPaymentFlag>>$E
+    $N+joinBlock(r) / leaveBlock(r) / completeBlock(r)$E\n$N    / editBlock(r): String$E
+    $N+successorIfLeaving(r: Ride): RideMember$E
+    +load(rideId: String): void
+    $N+reload(): void$E
+    +requestToJoin(msg: String): void
+    $N+cancelRequest(): void$E
+    +leave(): void
+    +cancelRide(): void
+    $N+editErrors(changes: Ride): Map<String,String>$E
+    $N+editRide(changes: Ride, s: ActivityStatus): void$E
+    $N+accept(q: JoinRequest) / reject(q: JoinRequest): void$E
+    $N+markPaid(): void$E
+    $N+flag(userId) / unflag(userId): void$E
+  }
+}
+
+CreateRideFragment -down-> CreateRideViewModel
+RideDetailFragment -down-> RideDetailViewModel
+CreateRideFragment -[hidden]right-> RideDetailFragment
+note bottom of CreateRideViewModel
+  <color:#1B7F3B>Create Ride opens from a + button on</color>
+  <color:#1B7F3B>Search and My Rides. Ride Detail's Edit Ride</color>
+  <color:#1B7F3B>dialog validates with editErrors() and stays</color>
+  <color:#1B7F3B>open until the input is valid.</color>
+end note
+$legend()
+@enduml

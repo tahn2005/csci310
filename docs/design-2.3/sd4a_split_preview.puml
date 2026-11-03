@@ -1,0 +1,33 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 1000
+title SD-4 Complete a Ride and Split the Cost (part 1 of 2): preview
+autonumber
+actor Organizer
+participant ":CostSplit\nFragment" as F
+participant ":CostSplit\nViewModel" as VM
+participant ":CostSplit\nService" as CS
+participant "s:\nEqualSplit" as ES
+
+Organizer -[#1B7F3B]> F : <color:#1B7F3B>tap Mark as Completed on</color>\n<color:#1B7F3B>Ride Detail (enabled only</color>\n<color:#1B7F3B>after departure)</color>
+F -[#1B7F3B]> VM : <color:#1B7F3B>load(rideId); cost pre-</color>\n<color:#1B7F3B>filled with expected cost</color>
+Organizer -> F : enter $47.00, choose Equal,\n<color:#1B7F3B>tick who pays the extra cent</color>
+F -[#1B7F3B]> F : <color:#1B7F3B>s = new</color>\n<color:#1B7F3B>EqualSplit(extraIds)</color>
+F -> VM : updatePreview(text, s\n<color:#1B7F3B>, inputProblem</color>)
+VM -> VM : Money.parse(text)
+alt cost invalid
+  VM --> F : "Enter a cost over $0"\n<color:#1B7F3B>(problem)</color>
+else valid
+  VM -> CS : preview(ride, 4700, s)
+  CS -> ES : split(4700, riders)
+  alt <color:#1B7F3B>wrong number of</color>\n<color:#1B7F3B>extra-cent riders</color>
+    ES -[#1B7F3B]-> CS : <color:#1B7F3B>VALIDATION "Choose</color>\n<color:#1B7F3B>exactly 1 rider..."</color>
+    CS -[#1B7F3B]-> VM : <color:#1B7F3B>problem</color>
+  else
+    ES --> CS : 1567, 1567, 1566\n<color:#1B7F3B>(chosen rider: 1567)</color>
+    CS --> VM : shares
+    VM --> F : each rider's share
+  end
+end
+$seqlegend()
+@enduml

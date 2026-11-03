@@ -1,0 +1,51 @@
+@startuml
+!include style.iuml
+
+package "Cost Split Service" {
+  class CostSplitService $CHG {
+    -rides: RideRepository
+    $N-clock: Clock$E
+    $N-session: Session$E
+    $N+completeBlockReason(r: Ride): String$E
+    +preview(r: Ride, cents: long,\n    s: SplitStrategy): List<CostShare>
+    $D+completeRide(rideId, cents, s): void$DE
+    $N+completeRide(rideId: String, cents: long,$E\n$N    s: SplitStrategy): Ride$E
+    $D+markPaid(rideId: String): void$DE
+    $N+markPaid(rideId: String): Ride$E
+    $D+flag(rideId: String, userId: String): void$DE
+    $N+flag(rideId: String, userId: String): NonPaymentFlag$E
+    $N+unflag(rideId: String, userId: String): void$E
+    $N+getFlagsForRide(rideId: String): List<NonPaymentFlag>$E
+    $N+getMyFlags(): List<NonPaymentFlag>$E
+  }
+  interface SplitStrategy <<interface>> $CHG {
+    +split(cents: long, riders: List<RideMember>)\n    : List<CostShare>
+    $N+method(): String$E
+  }
+  class EqualSplit $CHG {
+    $N+{static} METHOD = "EQUAL"$E
+    -extraCentUserIds: List<String>
+    $N+{static} leftoverCents(cents: long, riders: int): int$E
+  }
+  class CustomSplit $CHG {
+    $N+{static} METHOD = "CUSTOM"$E
+    -amounts: Map<String, Long>
+  }
+  class Formats <<new>> $NEW {
+    $N~{static} date / dateTime formatting for messages$E
+  }
+}
+interface RideRepository <<interface>>
+class Session
+CostSplitService --> RideRepository
+CostSplitService -[#1B7F3B]-> Session
+CostSplitService .[#1B7F3B].> Formats
+CostSplitService ..> SplitStrategy : uses
+SplitStrategy <|.. EqualSplit
+SplitStrategy <|.. CustomSplit
+note right of EqualSplit
+  <color:#1B7F3B>The organizer chooses which riders</color>
+  <color:#1B7F3B>pay the leftover cents.</color>
+end note
+$legend()
+@enduml

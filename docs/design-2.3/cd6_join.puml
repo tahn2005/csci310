@@ -1,0 +1,50 @@
+@startuml
+!include style.iuml
+
+package "Join Request Service" {
+  class JoinRequestService $CHG {
+    $N+{static} OWN_RIDE, FULL, DEPARTED, ...: String (reasons)$E
+    $N+{static} LEAVE_CUTOFF: Duration = 3 h$E
+    -rides: RideRepository
+    -requests: JoinRequestRepository
+    -clock: Clock
+    $N-session: Session$E
+    $D+checkEligibility(r: Ride, mine: JoinRequest): String$DE
+    $N+checkEligibility(r: Ride): String$E
+    +sendRequest(rideId: String, msg: String): JoinRequest
+    $D+cancelRequest(requestId: String): void$DE
+    $N+cancelRequest(rideId: String, requestId: String): void$E
+    $D+accept(q: JoinRequest): void$DE
+    $N+accept(q: JoinRequest): Ride$E
+    $D+reject(q: JoinRequest): void$DE
+    $N+reject(q: JoinRequest): Ride$E
+    +getMyRequests(): List<JoinRequest>
+    +getPending(rideId: String): List<JoinRequest>
+    $N+getIncomingRequests(): List<JoinRequest>$E
+    $N+syncDisplayName(): void$E
+    +canLeave(r: Ride): boolean
+    $N+leaveBlockReason(r: Ride): String$E
+    $N+successorIfLeaving(r: Ride): RideMember$E
+    $D+leaveRide(rideId: String): void$DE
+    $N+leaveRide(rideId: String): LeaveOutcome$E
+    $N-attachRides(list: List<JoinRequest>): List<JoinRequest>$E
+  }
+  class "JoinRequestService.LeaveOutcome" as LeaveOutcome <<new>> $NEW {
+    $N+rideCancelled: boolean$E
+    $N+newOrganizerName: String$E
+  }
+  class "Gather<T>" as Gather <<new>> $NEW {
+    $N~Gather(count: int, done: Callback<List<T>>)$E
+    $N~part(): Callback<T>$E
+  }
+}
+interface RideRepository <<interface>>
+interface JoinRequestRepository <<interface>>
+class Session
+JoinRequestService -up-> RideRepository
+JoinRequestService -up-> JoinRequestRepository
+JoinRequestService -[#1B7F3B]up-> Session
+JoinRequestService .[#1B7F3B].> LeaveOutcome : <color:#1B7F3B>returns</color>
+JoinRequestService .[#1B7F3B].> Gather : <color:#1B7F3B>uses</color>
+$legend()
+@enduml
