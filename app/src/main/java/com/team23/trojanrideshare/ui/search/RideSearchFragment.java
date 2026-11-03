@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.slider.Slider;
 import com.team23.trojanrideshare.databinding.FragmentSearchBinding;
 import com.team23.trojanrideshare.domain.AppException;
 import com.team23.trojanrideshare.domain.Callback;
@@ -86,6 +87,17 @@ public class RideSearchFragment extends BaseFragment {
         });
 
         b.radius.addOnChangeListener((s, value, fromUser) -> b.radiusLabel.setText("Radius: " + UiFormat.miles(value)));
+        // A new radius only matters once a location is entered; then search again right away.
+        b.radius.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+            @Override
+            public void onStartTrackingTouch(Slider s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(Slider s) {
+                if (!origin.getText().isEmpty() || !destination.getText().isEmpty()) runSearch();
+            }
+        });
         b.chipDate.setOnClickListener(v -> pickDate());
         b.chipDate.setOnCloseIconClickListener(v -> {
             SearchCriteria c = vm.current();
@@ -162,6 +174,7 @@ public class RideSearchFragment extends BaseFragment {
                 destination.resolveTyped(new Callback<Place>() {
                     @Override
                     public void onSuccess(Place d) {
+                        if (b == null) return; // left the screen while places were resolving
                         SearchCriteria c = vm.current();
                         c.setOrigin(o);
                         c.setDestination(d);

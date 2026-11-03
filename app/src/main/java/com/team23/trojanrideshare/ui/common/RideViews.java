@@ -19,7 +19,7 @@ public final class RideViews {
         StatusStyle.activity(b.activityChip, r.getActivityStatus());
         b.route.setText(UiFormat.route(r.getOrigin(), r.getDestination()));
         b.when.setText(UiFormat.dateTime(r.getDeparture()));
-        StatusStyle.capacity(b.capacityChip, r.getCapacityStatus(), r.capacityLabel());
+        StatusStyle.capacity(b.capacityChip, r.displayCapacity(), r.capacityLabel());
         if (r.getActivityStatus() == ActivityStatus.COMPLETED) {
             b.cost.setText("Actual " + Money.format(r.getActualCostCents()));
         } else {

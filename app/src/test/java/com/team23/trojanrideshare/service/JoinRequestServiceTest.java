@@ -198,6 +198,7 @@ public class JoinRequestServiceTest extends ServiceTestBase {
         joins.leaveRide(r.getRideId(), res);
         assertTrue(res.get().rideCancelled);
         assertEquals(ActivityStatus.CANCELLED, db.ride(r.getRideId()).getActivityStatus());
+        assertEquals(CapacityStatus.NOT_APPLICABLE, db.ride(r.getRideId()).getCapacityStatus());
         assertEquals(RequestStatus.REJECTED, db.requests.get(q.getRequestId()).getStatus());
     }
 

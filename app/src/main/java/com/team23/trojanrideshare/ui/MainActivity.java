@@ -34,11 +34,18 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        app = ((TrojanRideshareApp) getApplication()).container();
+        // After Android kills the process, Firebase still remembers the login but the session is
+        // gone, so restored screens would load with no user. Start fresh instead and let
+        // restoreSession() bring it back. A rotation while signed out keeps the Log In / Sign Up
+        // screen and whatever the user typed.
+        boolean processRestarted = savedInstanceState != null
+                && !app.session.isSignedIn() && app.account.hasSavedLogin();
+        if (processRestarted) savedInstanceState = null;
         super.onCreate(savedInstanceState);
         b = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(b.getRoot());
         setSupportActionBar(b.toolbar);
-        app = ((TrojanRideshareApp) getApplication()).container();
 
         b.bottomNav.setOnItemSelectedListener(item -> {
             showTab(item.getItemId());
@@ -57,9 +64,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        if (savedInstanceState != null && app.session.isSignedIn()) {
+        if (savedInstanceState != null) {
+            // Configuration change: the screens were restored as they were.
             b.splash.setVisibility(View.GONE);
-            tabsShown = true;
+            tabsShown = app.session.isSignedIn();
             updateBottomNav();
             updateUpButton();
         } else {

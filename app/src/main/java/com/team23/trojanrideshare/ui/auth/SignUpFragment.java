@@ -39,6 +39,8 @@ public class SignUpFragment extends BaseFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle state) {
         vm = new ViewModelProvider(this).get(AuthViewModel.class);
         observeCommon(vm, b.progress);
+        clearErrorOnEdit(b.fullNameLayout, b.nicknameLayout, b.emailLayout, b.uscIdLayout,
+                b.passwordLayout, b.gradYearLayout);
         vm.busy().observe(getViewLifecycleOwner(), busy -> b.create.setEnabled(!Boolean.TRUE.equals(busy)));
         vm.user().observe(getViewLifecycleOwner(), ev -> {
             User u = ev == null ? null : ev.take();

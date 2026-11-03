@@ -52,6 +52,7 @@ public class CreateRideFragment extends BaseFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle state) {
         vm = new ViewModelProvider(this).get(CreateRideViewModel.class);
         observeCommon(vm, b.progress);
+        clearErrorOnEdit(b.titleLayout, b.costLayout, b.noteLayout);
         vm.busy().observe(getViewLifecycleOwner(), busy -> b.post.setEnabled(!Boolean.TRUE.equals(busy)));
         vm.posted().observe(getViewLifecycleOwner(), ev -> {
             Ride r = ev == null ? null : ev.take();

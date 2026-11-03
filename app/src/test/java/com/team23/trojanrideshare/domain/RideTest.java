@@ -35,6 +35,21 @@ public class RideTest {
     }
 
     @Test
+    public void endedRidesNeverShowOpenSeats() {
+        // A ride cancelled before cancelling stored N/A still has OPEN saved.
+        Ride legacy = Fixtures.ride("a", Fixtures.USC, Fixtures.LAX, T, 3, "b");
+        legacy.setActivityStatus(ActivityStatus.CANCELLED);
+        assertEquals(CapacityStatus.OPEN, legacy.getCapacityStatus());
+        assertEquals(CapacityStatus.NOT_APPLICABLE, legacy.displayCapacity());
+        assertEquals("N/A – 2 riders", legacy.capacityLabel());
+
+        Ride active = Fixtures.ride("a", Fixtures.USC, Fixtures.LAX, T, 2, "b");
+        assertEquals(CapacityStatus.FULL, active.displayCapacity());
+        active.setActivityStatus(ActivityStatus.DELAYED);
+        assertEquals("Full – 2 of 2 riders", active.capacityLabel());
+    }
+
+    @Test
     public void displayNameFallsBackToFullName() {
         User u = new User("Tommy Trojan", "", "t@usc.edu", "1234567890", 2027);
         assertEquals("Tommy Trojan", u.getDisplayName());

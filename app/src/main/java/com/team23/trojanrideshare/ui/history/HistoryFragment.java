@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.android.material.slider.Slider;
 import com.team23.trojanrideshare.R;
 import com.team23.trojanrideshare.databinding.FragmentHistoryBinding;
 import com.team23.trojanrideshare.databinding.ItemRideBinding;
@@ -86,6 +87,17 @@ public class HistoryFragment extends BaseFragment {
         });
 
         b.radius.addOnChangeListener((s, v, user) -> b.radiusLabel.setText("Radius: " + UiFormat.miles(v)));
+        // A new radius only matters once a location is entered; then filter again right away.
+        b.radius.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+            @Override
+            public void onStartTrackingTouch(Slider s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(Slider s) {
+                if (!origin.getText().isEmpty() || !destination.getText().isEmpty()) apply();
+            }
+        });
         b.statusChips.setOnCheckedStateChangeListener((g, ids) -> apply());
         b.sortChip.setOnClickListener(v -> {
             newestFirst = !newestFirst;
@@ -127,6 +139,7 @@ public class HistoryFragment extends BaseFragment {
                 destination.resolveTyped(new Callback<Place>() {
                     @Override
                     public void onSuccess(Place d) {
+                        if (b == null) return; // left the screen while places were resolving
                         HistoryFilter f = new HistoryFilter();
                         f.setOrigin(o);
                         f.setDestination(d);

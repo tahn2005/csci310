@@ -4,6 +4,7 @@ import com.team23.trojanrideshare.data.RideRepository;
 import com.team23.trojanrideshare.domain.ActivityStatus;
 import com.team23.trojanrideshare.domain.AppException;
 import com.team23.trojanrideshare.domain.Callback;
+import com.team23.trojanrideshare.domain.CostShare;
 import com.team23.trojanrideshare.domain.Place;
 import com.team23.trojanrideshare.domain.Ride;
 import com.team23.trojanrideshare.domain.RideMember;
@@ -11,13 +12,12 @@ import com.team23.trojanrideshare.domain.util.Clock;
 import com.team23.trojanrideshare.domain.util.GeoUtils;
 import com.team23.trojanrideshare.gateway.LocationGateway;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** FR-2: create a ride post, edit its departure (On-Time/Delayed), and cancel it. */
+/** FR-2: create a ride post, edit it (On-Time/Delayed), and cancel it. */
 public class RideService {
 
     public static final String F_TITLE = "title";
@@ -62,12 +62,7 @@ public class RideService {
     /** FR-2.2: one message per invalid field; empty if the ride can be posted. */
     public Map<String, String> validate(Ride r) {
         Map<String, String> errors = new LinkedHashMap<>();
-        String title = r.getTitle() == null ? "" : r.getTitle().trim();
-        if (title.isEmpty()) {
-            errors.put(F_TITLE, "Enter a title.");
-        } else if (title.length() > MAX_TITLE_LENGTH) {
-            errors.put(F_TITLE, "Title must be " + MAX_TITLE_LENGTH + " characters or fewer.");
-        }
+        checkTitle(r, errors);
         if (!isChosen(r.getOrigin())) {
             errors.put(F_ORIGIN, "Choose the origin from the location suggestions.");
         }
@@ -79,6 +74,21 @@ public class RideService {
                 || GeoUtils.distanceMiles(r.getOrigin(), r.getDestination()) < SAME_PLACE_MILES)) {
             errors.put(F_DESTINATION, "The origin and destination must be different places.");
         }
+        checkDetails(r, errors);
+        return errors;
+    }
+
+    private static void checkTitle(Ride r, Map<String, String> errors) {
+        String title = r.getTitle() == null ? "" : r.getTitle().trim();
+        if (title.isEmpty()) {
+            errors.put(F_TITLE, "Enter a title.");
+        } else if (title.length() > MAX_TITLE_LENGTH) {
+            errors.put(F_TITLE, "Title must be " + MAX_TITLE_LENGTH + " characters or fewer.");
+        }
+    }
+
+    /** Departure, seats, cost and note: the fields checked both when posting and when editing. */
+    private void checkDetails(Ride r, Map<String, String> errors) {
         if (r.getDeparture() == null) {
             errors.put(F_DEPARTURE, "Choose the ride date and departure time.");
         } else if (!r.getDeparture().isAfter(clock.now())) {
@@ -94,7 +104,6 @@ public class RideService {
         if (r.getNote().length() > MAX_NOTE_LENGTH) {
             errors.put(F_NOTE, "Note must be " + MAX_NOTE_LENGTH + " characters or fewer.");
         }
-        return errors;
     }
 
     private static boolean isChosen(Place p) {
@@ -140,16 +149,27 @@ public class RideService {
         return editBlockReason(r, session.uid());
     }
 
-    /** FR-2.5.1: change only the departure time, marking the ride Delayed or back to On-Time. */
-    public void updateDeparture(String rideId, LocalDateTime t, ActivityStatus s, Callback<Ride> cb) {
+    /** FR-2.5: one message per invalid field of the edit form; empty if it can be saved. */
+    public Map<String, String> validateEdit(Ride changes) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        checkTitle(changes, errors);
+        checkDetails(changes, errors);
+        return errors;
+    }
+
+    /**
+     * FR-2.5: the organizer edits the title, departure, maximum riders, expected cost and note,
+     * and marks the ride On-Time or Delayed. The route stays fixed because riders joined for it,
+     * and the maximum can't drop below the riders already in the ride.
+     */
+    public void editRide(String rideId, Ride changes, ActivityStatus s, Callback<Ride> cb) {
         if (s != ActivityStatus.ON_TIME && s != ActivityStatus.DELAYED) {
             cb.onError(AppException.validation("Choose On-Time or Delayed."));
             return;
         }
-        if (t == null || !t.isAfter(clock.now())) {
-            Map<String, String> f = new LinkedHashMap<>();
-            f.put(F_DEPARTURE, "The new departure time must be in the future.");
-            cb.onError(AppException.validation(f));
+        Map<String, String> errors = validateEdit(changes);
+        if (!errors.isEmpty()) {
+            cb.onError(AppException.validation(errors));
             return;
         }
         String uid = session.uid();
@@ -157,8 +177,19 @@ public class RideService {
             Ride r = ctx.getRide();
             String reason = editBlockReason(r, uid);
             if (reason != null) throw AppException.notAllowed(reason);
-            r.setDeparture(t.withSecond(0).withNano(0));
+            if (changes.getMaxRiders() < r.riderCount()) {
+                Map<String, String> f = new LinkedHashMap<>();
+                f.put(F_MAX_RIDERS, "This ride already has " + r.riderCount()
+                        + " riders, so the maximum can't be lower than that.");
+                throw AppException.validation(f);
+            }
+            r.setTitle(changes.getTitle().trim());
+            r.setDeparture(changes.getDeparture().withSecond(0).withNano(0));
+            r.setMaxRiders(changes.getMaxRiders());
+            r.setExpectedCostCents(changes.getExpectedCostCents());
+            r.setNote(changes.getNote().trim());
             r.setActivityStatus(s);
+            r.updateCapacity();
             ctx.putRide(r);
             return r;
         }, cb);
@@ -172,10 +203,76 @@ public class RideService {
             String reason = editBlockReason(r, uid);
             if (reason != null) throw AppException.notAllowed(reason);
             r.setActivityStatus(ActivityStatus.CANCELLED);
+            r.updateCapacity();
             ctx.rejectPending();
             ctx.putRide(r);
             return r;
         }, cb);
+    }
+
+    /**
+     * FR-1.7: after a nickname change, shows the new name on every ride the user is part of
+     * (as organizer, rider, and on their cost share). Rides that already match are skipped.
+     */
+    public void syncDisplayName(Callback<Void> cb) {
+        String uid = session.uid();
+        String name = session.displayName();
+        if (uid == null || name == null || name.isEmpty()) {
+            cb.onError(AppException.notAllowed("Please log in again."));
+            return;
+        }
+        rides.getRidesOf(uid, new Callback<List<Ride>>() {
+            @Override
+            public void onSuccess(List<Ride> mine) {
+                List<Ride> stale = new ArrayList<>();
+                for (Ride r : mine) {
+                    if (renameIn(r, uid, name)) stale.add(r);
+                }
+                Gather<Void> g = new Gather<>(stale.size(), new Callback<List<Void>>() {
+                    @Override
+                    public void onSuccess(List<Void> done) {
+                        cb.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(AppException e) {
+                        cb.onError(e);
+                    }
+                });
+                for (Ride r : stale) {
+                    rides.runTransaction(r.getRideId(), ctx -> {
+                        Ride fresh = ctx.getRide();
+                        if (renameIn(fresh, uid, name)) ctx.putRide(fresh);
+                        return null;
+                    }, g.part());
+                }
+            }
+
+            @Override
+            public void onError(AppException e) {
+                cb.onError(e);
+            }
+        });
+    }
+
+    /** Sets {@code uid}'s name everywhere it appears on the ride; true if anything changed. */
+    static boolean renameIn(Ride r, String uid, String name) {
+        boolean changed = false;
+        if (r.isOrganizer(uid) && !name.equals(r.getOrganizerName())) {
+            r.setOrganizerName(name);
+            changed = true;
+        }
+        RideMember m = r.member(uid);
+        if (m != null && !name.equals(m.getDisplayName())) {
+            m.setDisplayName(name);
+            changed = true;
+        }
+        CostShare s = r.shareOf(uid);
+        if (s != null && !name.equals(s.getDisplayName())) {
+            s.setDisplayName(name);
+            changed = true;
+        }
+        return changed;
     }
 
     private static String editBlockReason(Ride r, String uid) {

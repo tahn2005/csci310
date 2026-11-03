@@ -80,9 +80,22 @@ stored on the device and applies to every account used on it.
 ./gradlew testDebugUnitTest
 ```
 
-61 JUnit 4 tests cover the Application Logic layer (validation, search filters and sorts, join
-eligibility, leaving and organizer handoff, equal/custom splits, payments and flags, history
-and monthly summary) against an in-memory repository, plus `Money`, `GeoUtils`, `SafeLogger`.
+74 JUnit 4 tests cover the Application Logic layer (validation, ride editing, search filters
+and sorts, join eligibility, leaving and organizer handoff, equal/custom splits, payments and
+flags, nickname changes, history and monthly summary) against an in-memory repository, plus
+`Ride`, `Money`, `GeoUtils`, `SafeLogger`.
+
+### Security Rules tests
+
+```bash
+cd rules-tests && npm install && npm test
+```
+
+63 tests run `firestore.rules` in its own Firestore emulator (port 8181) and check that every
+write the app makes is allowed and that forbidden writes (editing someone else's ride or name,
+changing a share amount, editing an ended ride, …) are rejected. Each test writes the exact
+document shape `FirestoreMapper` produces. Needs Node.js and `firebase-tools`, like the app's
+emulator setup.
 
 ## Suggested demo video script
 
@@ -97,7 +110,8 @@ Use two or more accounts (log out and in, or two emulators).
    "Available seats only", sort by time or proximity. Open the ride → **Request to Join** with
    a message. Show the disabled button reasons (own ride, full, already requested).
 5. As the organizer, **My Rides**: accept/reject requests; fill the ride to show "Full" and the
-   "This ride is full" message; **Edit departure** → Delayed; **Leave** as organizer to show
+   "This ride is full" message; **Edit Ride** (title, time, seats, cost, note) → Delayed;
+   **Leave** as organizer to show
    the handoff to the most recently accepted rider; **Cancel Ride** to show pending requests
    becoming Rejected.
 6. Use the **Demo clock** to pass departure, then **Mark as Completed**: actual cost, Equal

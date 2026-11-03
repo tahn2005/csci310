@@ -9,16 +9,18 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.team23.trojanrideshare.R;
-import com.team23.trojanrideshare.databinding.DialogEditDepartureBinding;
+import com.team23.trojanrideshare.databinding.DialogEditRideBinding;
 import com.team23.trojanrideshare.databinding.DialogRequestJoinBinding;
 import com.team23.trojanrideshare.databinding.FragmentRideDetailBinding;
 import com.team23.trojanrideshare.databinding.ItemMemberBinding;
 import com.team23.trojanrideshare.databinding.ItemRequestBinding;
 import com.team23.trojanrideshare.domain.ActivityStatus;
+import com.team23.trojanrideshare.domain.AppException;
 import com.team23.trojanrideshare.domain.CostShare;
 import com.team23.trojanrideshare.domain.JoinRequest;
 import com.team23.trojanrideshare.domain.NonPaymentFlag;
@@ -28,6 +30,7 @@ import com.team23.trojanrideshare.domain.RideMember;
 import com.team23.trojanrideshare.domain.util.Money;
 import com.team23.trojanrideshare.service.CustomSplit;
 import com.team23.trojanrideshare.service.JoinRequestService;
+import com.team23.trojanrideshare.service.RideService;
 import com.team23.trojanrideshare.ui.common.BaseFragment;
 import com.team23.trojanrideshare.ui.common.StatusStyle;
 import com.team23.trojanrideshare.ui.common.UiFormat;
@@ -99,7 +102,7 @@ public class RideDetailFragment extends BaseFragment {
         String me = vm.uid();
         b.title.setText(r.getTitle());
         StatusStyle.activity(b.activityChip, r.getActivityStatus());
-        StatusStyle.capacity(b.capacityChip, r.getCapacityStatus(), r.capacityLabel());
+        StatusStyle.capacity(b.capacityChip, r.displayCapacity(), r.capacityLabel());
         b.organizer.setText("Organized by " + r.getOrganizerName() + (r.isOrganizer(me) ? " (you)" : "") + "  ›");
         b.organizer.setOnClickListener(v -> push(ProfileFragment.forUser(r.getOrganizerId())));
         b.origin.setText(placeText("From", r.getOrigin()));
@@ -180,7 +183,7 @@ public class RideDetailFragment extends BaseFragment {
                 b.markCompleted.setText("Mark as Completed");
             }
             b.editDeparture.setVisibility(View.VISIBLE);
-            b.editDeparture.setOnClickListener(v -> editDeparture(r));
+            b.editDeparture.setOnClickListener(v -> editRide(r));
             b.cancelRide.setVisibility(View.VISIBLE);
             b.cancelRide.setOnClickListener(v -> confirm("Cancel this ride?",
                     "Riders will see it as Cancelled and pending requests will be rejected. This can't be undone.",
@@ -230,8 +233,18 @@ public class RideDetailFragment extends BaseFragment {
         confirm("Leave this ride?", msg, "Leave Ride", vm::leave);
     }
 
-    private void editDeparture(Ride r) {
-        DialogEditDepartureBinding d = DialogEditDepartureBinding.inflate(getLayoutInflater());
+    /** FR-2.5: the organizer edits everything except the route. */
+    private void editRide(Ride r) {
+        DialogEditRideBinding d = DialogEditRideBinding.inflate(getLayoutInflater());
+        d.title.setText(r.getTitle());
+        d.cost.setText(Money.plain(r.getExpectedCostCents()));
+        d.note.setText(r.getNote());
+        int[] seatIds = {R.id.riders2, R.id.riders3, R.id.riders4, R.id.riders5, R.id.riders6};
+        for (int i = 0; i < seatIds.length; i++) {
+            // The maximum can't drop below the riders already in the ride.
+            d.maxRiders.findViewById(seatIds[i]).setEnabled(Ride.MIN_RIDERS + i >= r.riderCount());
+        }
+        d.maxRiders.check(seatIds[r.getMaxRiders() - Ride.MIN_RIDERS]);
         LocalDateTime[] chosen = {r.getDeparture()};
         Runnable refresh = () -> {
             d.date.setText(UiFormat.date(chosen[0].toLocalDate()));
@@ -253,13 +266,41 @@ public class RideDetailFragment extends BaseFragment {
                 refresh.run();
             }, cur.getHour(), cur.getMinute(), false).show();
         });
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Edit departure")
+        clearErrorOnEdit(d.titleLayout, d.costLayout, d.noteLayout);
+        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Edit ride")
                 .setView(d.getRoot())
                 .setNegativeButton("Back", null)
-                .setPositiveButton("Save", (dlg, w) -> vm.updateDeparture(chosen[0],
-                        d.status.getCheckedButtonId() == R.id.delayed ? ActivityStatus.DELAYED : ActivityStatus.ON_TIME))
+                .setPositiveButton("Save", null)
                 .show();
+        // Validate before closing so a mistake doesn't throw away the organizer's other edits.
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            Ride changes = new Ride();
+            changes.setTitle(String.valueOf(d.title.getText()));
+            changes.setDeparture(chosen[0]);
+            changes.setNote(String.valueOf(d.note.getText()));
+            for (int i = 0; i < seatIds.length; i++) {
+                if (d.maxRiders.getCheckedButtonId() == seatIds[i]) changes.setMaxRiders(Ride.MIN_RIDERS + i);
+            }
+            Map<String, String> errors;
+            try {
+                changes.setExpectedCostCents(Money.parse(String.valueOf(d.cost.getText())));
+                errors = vm.editErrors(changes);
+            } catch (AppException e) {
+                errors = vm.editErrors(changes);
+                errors.put(RideService.F_COST, e.getMessage());
+            }
+            d.titleLayout.setError(errors.get(RideService.F_TITLE));
+            d.costLayout.setError(errors.get(RideService.F_COST));
+            d.noteLayout.setError(errors.get(RideService.F_NOTE));
+            String other = errors.containsKey(RideService.F_DEPARTURE) ? errors.get(RideService.F_DEPARTURE)
+                    : errors.get(RideService.F_MAX_RIDERS);
+            if (other != null) toast(other);
+            if (!errors.isEmpty()) return;
+            vm.editRide(changes,
+                    d.status.getCheckedButtonId() == R.id.delayed ? ActivityStatus.DELAYED : ActivityStatus.ON_TIME);
+            dialog.dismiss();
+        });
     }
 
     // ------------------------------------------------------------------ pending requests
