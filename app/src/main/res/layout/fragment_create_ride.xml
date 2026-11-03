@@ -176,7 +176,6 @@
             android:layout_marginTop="12dp"
             android:hint="Expected total cost (USD)"
             app:helperText="Your estimate of the whole fare"
-            app:prefixText="$ "
             app:startIconDrawable="@drawable/ic_money">
 
             <com.google.android.material.textfield.TextInputEditText

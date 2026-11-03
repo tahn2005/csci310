@@ -193,6 +193,11 @@ public class AccountService {
         loadProfile(uid, cb);
     }
 
+    /** True if Firebase remembers a login, even before {@link #restoreSession} has run. */
+    public boolean hasSavedLogin() {
+        return auth.currentUserId() != null;
+    }
+
     private void loadProfile(String uid, Callback<User> cb) {
         users.getUser(uid, new Callback<User>() {
             @Override

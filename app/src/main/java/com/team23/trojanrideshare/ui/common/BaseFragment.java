@@ -1,13 +1,17 @@
 package com.team23.trojanrideshare.ui.common;
 
 import android.content.Context;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputLayout;
 import com.team23.trojanrideshare.domain.AppException;
 import com.team23.trojanrideshare.ui.AppContainer;
 import com.team23.trojanrideshare.ui.MainActivity;
@@ -71,6 +75,28 @@ public abstract class BaseFragment extends Fragment {
             String m = ev == null ? null : ev.take();
             if (m != null) toast(m);
         });
+    }
+
+    /** Clears a field's error as soon as the user edits it, so a fixed field stops showing red. */
+    protected static void clearErrorOnEdit(TextInputLayout... layouts) {
+        for (TextInputLayout layout : layouts) {
+            EditText input = layout.getEditText();
+            if (input == null) continue;
+            input.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if (layout.getError() != null) layout.setError(null);
+                }
+            });
+        }
     }
 
     /** Shows per-field errors; return true if they were all shown. */

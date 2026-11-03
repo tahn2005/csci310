@@ -61,6 +61,7 @@ public class ProfileViewModel extends BaseViewModel {
     /** @param profileUid the user to show; null shows the signed-in user. */
     public void load(String profileUid) {
         uid = profileUid == null ? app().session.uid() : profileUid;
+        if (uid == null) return; // signed out (e.g. screen restored before the session)
         app().account.getUser(uid, call(u -> {
             user.setValue(u);
             app().history.getPublicRides(u, call(publicRides::setValue));
@@ -82,6 +83,9 @@ public class ProfileViewModel extends BaseViewModel {
         app().account.updateNickname(name, call(u -> {
             user.setValue(u);
             say("Nickname updated.");
+            // Pending requests, ride posts, rider lists and shares store the name too. Requests
+            // go first: if one is accepted meanwhile, the rides pass still renames that rider.
+            app().joins.syncDisplayName(call(v -> app().rides.syncDisplayName(call(w -> reload()))));
         }));
     }
 

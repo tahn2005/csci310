@@ -81,21 +81,34 @@ public class Ride {
         return departure != null && !departure.isAfter(now);
     }
 
-    /** FR-2.6: Full when riders reach the maximum, Open otherwise, N/A once Completed. */
+    /**
+     * FR-2.6: Full when riders reach the maximum, Open otherwise, N/A once the ride has ended
+     * (Completed, or Cancelled so it never advertises open seats).
+     */
     public void updateCapacity() {
-        if (activityStatus == ActivityStatus.COMPLETED) {
+        if (activityStatus == ActivityStatus.COMPLETED || activityStatus == ActivityStatus.CANCELLED) {
             capacityStatus = CapacityStatus.NOT_APPLICABLE;
         } else {
             capacityStatus = isFull() ? CapacityStatus.FULL : CapacityStatus.OPEN;
         }
     }
 
+    /**
+     * The capacity to show: N/A for any ride that has ended, including rides cancelled before
+     * cancelling started storing N/A. The stored value is left as is.
+     */
+    public CapacityStatus displayCapacity() {
+        boolean ended = activityStatus == ActivityStatus.COMPLETED || activityStatus == ActivityStatus.CANCELLED;
+        return ended ? CapacityStatus.NOT_APPLICABLE : capacityStatus;
+    }
+
     /** e.g. "Open – 2 of 4 riders", "Full – 4 of 4 riders", "N/A – 3 riders". */
     public String capacityLabel() {
-        if (capacityStatus == CapacityStatus.NOT_APPLICABLE) {
+        CapacityStatus shown = displayCapacity();
+        if (shown == CapacityStatus.NOT_APPLICABLE) {
             return "N/A – " + riderCount() + (riderCount() == 1 ? " rider" : " riders");
         }
-        return capacityStatus.label() + " – " + riderCount() + " of " + maxRiders + " riders";
+        return shown.label() + " – " + riderCount() + " of " + maxRiders + " riders";
     }
 
     public boolean hasPendingRequestFrom(String uid) {

@@ -219,7 +219,7 @@ public class ProfileFragment extends BaseFragment {
 
     private void showClock() {
         Duration off = vm.clockOffset();
-        String offset = off.isZero() ? "real time" : "+" + off.toDays() + "d " + off.toHoursPart() + "h ahead";
+        String offset = off.isZero() ? "real time" : "+" + off.toDays() + "d " + (off.toHours() % 24) + "h ahead";
         b.clock.setText("Now: " + UiFormat.dateTime(vm.now()) + " (" + offset + ")\n"
                 + "Moves the app clock forward so you can show departed rides, the 3-hour leave rule, "
                 + "and monthly summaries without waiting.");

@@ -138,8 +138,14 @@ public class RideDetailViewModel extends BaseViewModel {
         }));
     }
 
-    public void updateDeparture(LocalDateTime t, ActivityStatus s) {
-        app().rides.updateDeparture(rideId, t, s, call(r -> {
+    /** Field errors for the edit form, checked before the dialog closes. */
+    public Map<String, String> editErrors(Ride changes) {
+        return app().rides.validateEdit(changes);
+    }
+
+    /** @param changes title, departure, max riders, expected cost and note from the edit form */
+    public void editRide(Ride changes, ActivityStatus s) {
+        app().rides.editRide(rideId, changes, s, call(r -> {
             say("Ride updated: " + s.label() + ".");
             reload();
         }));

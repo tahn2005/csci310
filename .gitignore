@@ -17,3 +17,6 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 emulator-data/
+
+# Security Rules test dependencies
+rules-tests/node_modules/

@@ -272,6 +272,54 @@ public class JoinRequestService {
         });
     }
 
+    /**
+     * FR-1.7: after a nickname change, updates the name on the user's pending requests, so
+     * the organizer sees it and an accepted rider joins under the new name.
+     */
+    public void syncDisplayName(Callback<Void> cb) {
+        String uid = session.uid();
+        String name = session.displayName();
+        if (uid == null || name == null || name.isEmpty()) {
+            cb.onError(AppException.notAllowed("Please log in again."));
+            return;
+        }
+        requests.getRequestsBy(uid, new Callback<List<JoinRequest>>() {
+            @Override
+            public void onSuccess(List<JoinRequest> sent) {
+                List<JoinRequest> stale = new ArrayList<>();
+                for (JoinRequest q : sent) {
+                    if (q.getStatus() == RequestStatus.PENDING && !name.equals(q.getRequesterName())) stale.add(q);
+                }
+                Gather<Void> g = new Gather<>(stale.size(), new Callback<List<Void>>() {
+                    @Override
+                    public void onSuccess(List<Void> done) {
+                        cb.onSuccess(null);
+                    }
+
+                    @Override
+                    public void onError(AppException e) {
+                        cb.onError(e);
+                    }
+                });
+                for (JoinRequest stored : stale) {
+                    rides.runTransaction(stored.getRideId(), ctx -> {
+                        JoinRequest q = ctx.getRequest(stored.getRequestId());
+                        if (q != null && q.getStatus() == RequestStatus.PENDING) {
+                            q.setRequesterName(name);
+                            ctx.putRequest(q);
+                        }
+                        return null;
+                    }, g.part());
+                }
+            }
+
+            @Override
+            public void onError(AppException e) {
+                cb.onError(e);
+            }
+        });
+    }
+
     private void attachRides(List<JoinRequest> list, Callback<List<JoinRequest>> cb) {
         LinkedHashSet<String> unique = new LinkedHashSet<>();
         for (JoinRequest q : list) unique.add(q.getRideId());
@@ -334,7 +382,7 @@ public class JoinRequestService {
                 r.getMembers().remove(r.member(uid));
                 outcome = new LeaveOutcome(false, null);
             }
-            if (r.getActivityStatus() != ActivityStatus.CANCELLED) r.updateCapacity();
+            r.updateCapacity();
             ctx.putRide(r);
             return outcome;
         }, cb);

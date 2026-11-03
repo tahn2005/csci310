@@ -80,7 +80,8 @@ public class CostSplitFragment extends BaseFragment {
             b.save.setEnabled(p == null && vm.cents() > 0);
         });
         vm.busy().observe(getViewLifecycleOwner(), busy -> {
-            if (Boolean.TRUE.equals(busy)) b.save.setEnabled(false);
+            // Re-enable after a failed save (e.g. offline) so the organizer can retry.
+            b.save.setEnabled(!Boolean.TRUE.equals(busy) && vm.problem().getValue() == null && vm.cents() > 0);
         });
         vm.saved().observe(getViewLifecycleOwner(), ev -> {
             if (ev != null && ev.take() != null) {

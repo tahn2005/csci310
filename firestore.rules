@@ -50,13 +50,55 @@ service cloud.firestore {
     // ------------------------------------------------------------ rides (FR-2 – FR-4)
     match /rides/{rideId} {
 
-      // FR-2.5 / FR-2.E4: only the organizer changes the ride, and never its fixed details.
-      // FR-4.E5: once Completed, the organizer can't change anyone's payment status.
+      // A display name the app could have written (full name or nickname).
+      function validName(n) {
+        return n is string && n.size() > 0 && n.size() <= 200;
+      }
+
+      // FR-2.5 / FR-2.E4: only the organizer changes the ride, and never its route.
+      // Title, seats, cost and note change only while the ride is still happening, and stay
+      // valid: limits match RideService, and seats leave room for every current rider.
+      // FR-4.E5: once Completed, payment statuses can't change.
       function organizerUpdate() {
+        let after = request.resource.data;
         return resource.data.organizerId == me()
-          && !changedKeys().hasAny(['title', 'origin', 'destination', 'maxRiders',
-                                    'expectedCostCents', 'note', 'createdAt'])
+          && !changedKeys().hasAny(['origin', 'destination', 'createdAt'])
+          && (!changedKeys().hasAny(['title', 'maxRiders', 'expectedCostCents', 'note'])
+              || resource.data.activityStatus in ['ON_TIME', 'DELAYED'])
+          && validName(after.organizerName)
+          && after.title is string && after.title.size() > 0 && after.title.size() <= 60
+          && after.note is string && after.note.size() <= 300
+          && after.expectedCostCents is int && after.expectedCostCents > 0
+          && after.maxRiders is int && after.maxRiders >= 2 && after.maxRiders <= 6
+          && after.maxRiders >= after.memberIds.size()
           && (resource.data.activityStatus != 'COMPLETED' || !changedKeys().hasAny(['shares']));
+      }
+
+      // Rider i is unchanged, or is me with only my display name changed.
+      function memberRenamed(i) {
+        let before = resource.data.members;
+        let after = request.resource.data.members;
+        return i >= before.size() || before[i] == after[i]
+          || (before[i].userId == me()
+              && after[i].diff(before[i]).affectedKeys().hasOnly(['displayName'])
+              && validName(after[i].displayName));
+      }
+
+      // FR-1.7: after a nickname change, a rider updates only their own name on the ride
+      // (rider list, cost share, and the organizer name if they organize it).
+      function selfRename() {
+        let after = request.resource.data;
+        return changedKeys().hasOnly(['members', 'organizerName', 'shares'])
+          && me() in resource.data.memberIds
+          && (!changedKeys().hasAny(['organizerName'])
+              || (resource.data.organizerId == me() && validName(after.organizerName)))
+          && after.members.size() == resource.data.members.size()
+          && memberRenamed(0) && memberRenamed(1) && memberRenamed(2)
+          && memberRenamed(3) && memberRenamed(4) && memberRenamed(5)
+          && (!changedKeys().hasAny(['shares'])
+              || (after.shares.diff(resource.data.shares).affectedKeys().hasOnly([me()])
+                  && after.shares[me()].diff(resource.data.shares[me()]).affectedKeys().hasOnly(['displayName'])
+                  && validName(after.shares[me()].displayName)));
       }
 
       // FR-3.6 / FR-3.9: a student adds or removes only their own pending request.
@@ -102,7 +144,7 @@ service cloud.firestore {
         && request.resource.data.pendingRequests.size() == 0;
 
       allow update: if signedIn()
-        && (organizerUpdate() || requesterUpdate() || riderLeaving() || riderPaying());
+        && (organizerUpdate() || requesterUpdate() || riderLeaving() || riderPaying() || selfRename());
 
       allow delete: if false;
     }
@@ -123,10 +165,17 @@ service cloud.firestore {
         && request.resource.data.message.size() <= 200;
 
       // FR-3.8: only the ride's organizer answers; FR-3.10.2: a new organizer takes over.
+      // FR-1.7: the requester may only update their own name after a nickname change.
       allow update: if signedIn()
-        && resource.data.organizerId == me()
-        && request.resource.data.requesterId == resource.data.requesterId
-        && request.resource.data.rideId == resource.data.rideId;
+        && ((resource.data.organizerId == me()
+             && request.resource.data.requesterId == resource.data.requesterId
+             && request.resource.data.rideId == resource.data.rideId)
+          || (resource.data.requesterId == me()
+             && resource.data.status == 'PENDING'
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['requesterName'])
+             && request.resource.data.requesterName is string
+             && request.resource.data.requesterName.size() > 0
+             && request.resource.data.requesterName.size() <= 200));
 
       // FR-3.9: the requester cancels (deletes) their own pending request.
       allow delete: if signedIn()
