@@ -29,7 +29,7 @@ departs from the 2.2 design and why.
 
 ## Running the app
 
-Open the `TrojanRideshare` folder in Android Studio and run the `app` configuration on the
+Open the `csci310-main` folder in Android Studio and run the `app` configuration on the
 Pixel 4 (API 33, Google APIs) emulator. The app needs a Firebase backend; pick one:
 
 ### Option A — Firebase Local Emulator Suite (default, no cloud setup)
