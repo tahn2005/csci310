@@ -24,30 +24,30 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Converts between domain objects and Firestore documents. Every document of a type is
- * always written with the same set of fields, so Security Rules can compare old and new
- * versions field by field.
+ * Converts between domain objects and document maps. Every document of a type is always
+ * written with the same set of fields, so Security Rules can compare old and new versions
+ * field by field. The on-device database stores the same document shape.
  */
-final class FirestoreMapper {
+public final class FirestoreMapper {
 
     private FirestoreMapper() {
     }
 
     // ------------------------------------------------------------------ time
 
-    static Long millis(Instant i) {
+    public static Long millis(Instant i) {
         return i == null ? null : i.toEpochMilli();
     }
 
-    static long millis(LocalDateTime t) {
+    public static long millis(LocalDateTime t) {
         return t.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    static Instant instant(Object o) {
+    public static Instant instant(Object o) {
         return o instanceof Number ? Instant.ofEpochMilli(((Number) o).longValue()) : null;
     }
 
-    static LocalDateTime localDateTime(Object o) {
+    public static LocalDateTime localDateTime(Object o) {
         return o instanceof Number
                 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(((Number) o).longValue()), ZoneId.systemDefault())
                 : null;
@@ -77,7 +77,7 @@ final class FirestoreMapper {
 
     // ------------------------------------------------------------------ place
 
-    static Map<String, Object> toMap(Place p) {
+    public static Map<String, Object> toMap(Place p) {
         if (p == null) return null;
         Map<String, Object> m = new HashMap<>();
         m.put("placeId", p.getPlaceId());
@@ -88,7 +88,7 @@ final class FirestoreMapper {
         return m;
     }
 
-    static Place toPlace(Object o) {
+    public static Place toPlace(Object o) {
         if (!(o instanceof Map)) return null;
         Map<String, Object> m = map(o);
         return new Place(str(m.get("placeId")), str(m.get("name")), str(m.get("address")),
@@ -97,7 +97,7 @@ final class FirestoreMapper {
 
     // ------------------------------------------------------------------ user
 
-    static Map<String, Object> toMap(User u) {
+    public static Map<String, Object> toMap(User u) {
         Map<String, Object> m = new HashMap<>();
         m.put("uid", u.getUid());
         m.put("fullName", u.getFullName());
@@ -110,22 +110,27 @@ final class FirestoreMapper {
     }
 
     static User toUser(DocumentSnapshot s) {
+        Map<String, Object> d = s.getData();
+        return toUser(s.getId(), d == null ? new HashMap<>() : d);
+    }
+
+    public static User toUser(String id, Map<String, Object> d) {
         User u = new User();
-        u.setUid(s.getId());
-        u.setFullName(s.getString("fullName"));
-        u.setNickname(s.getString("nickname"));
-        u.setEmail(s.getString("email"));
-        u.setUscId(s.getString("uscId"));
-        u.setGradYear((int) num(s.get("gradYear")));
+        u.setUid(id);
+        u.setFullName(str(d.get("fullName")));
+        u.setNickname(str(d.get("nickname")));
+        u.setEmail(str(d.get("email")));
+        u.setUscId(str(d.get("uscId")));
+        u.setGradYear((int) num(d.get("gradYear")));
         List<String> ids = new ArrayList<>();
-        for (Object o : list(s.get("publicRideIds"))) ids.add(str(o));
+        for (Object o : list(d.get("publicRideIds"))) ids.add(str(o));
         u.setPublicRideIds(ids);
         return u;
     }
 
     // ------------------------------------------------------------------ ride
 
-    static Map<String, Object> toMap(Ride r) {
+    public static Map<String, Object> toMap(Ride r) {
         Map<String, Object> m = new HashMap<>();
         m.put("title", r.getTitle());
         m.put("organizerId", r.getOrganizerId());
@@ -172,23 +177,28 @@ final class FirestoreMapper {
     }
 
     static Ride toRide(DocumentSnapshot s) {
+        Map<String, Object> d = s.getData();
+        return toRide(s.getId(), d == null ? new HashMap<>() : d);
+    }
+
+    public static Ride toRide(String id, Map<String, Object> d) {
         Ride r = new Ride();
-        r.setRideId(s.getId());
-        r.setTitle(s.getString("title"));
-        r.setOrganizerId(s.getString("organizerId"));
-        r.setOrganizerName(s.getString("organizerName"));
-        r.setOrigin(toPlace(s.get("origin")));
-        r.setDestination(toPlace(s.get("destination")));
-        r.setDeparture(localDateTime(s.get("departureMillis")));
-        r.setMaxRiders((int) num(s.get("maxRiders")));
-        r.setExpectedCostCents(num(s.get("expectedCostCents")));
-        r.setActualCostCents(num(s.get("actualCostCents")));
-        r.setNote(s.getString("note"));
-        r.setActivityStatus(ActivityStatus.fromName(s.getString("activityStatus")));
-        r.setCapacityStatus(CapacityStatus.fromName(s.getString("capacityStatus")));
+        r.setRideId(id);
+        r.setTitle(str(d.get("title")));
+        r.setOrganizerId(str(d.get("organizerId")));
+        r.setOrganizerName(str(d.get("organizerName")));
+        r.setOrigin(toPlace(d.get("origin")));
+        r.setDestination(toPlace(d.get("destination")));
+        r.setDeparture(localDateTime(d.get("departureMillis")));
+        r.setMaxRiders((int) num(d.get("maxRiders")));
+        r.setExpectedCostCents(num(d.get("expectedCostCents")));
+        r.setActualCostCents(num(d.get("actualCostCents")));
+        r.setNote(str(d.get("note")));
+        r.setActivityStatus(ActivityStatus.fromName(str(d.get("activityStatus"))));
+        r.setCapacityStatus(CapacityStatus.fromName(str(d.get("capacityStatus"))));
 
         List<RideMember> members = new ArrayList<>();
-        for (Object o : list(s.get("members"))) {
+        for (Object o : list(d.get("members"))) {
             Map<String, Object> mm = map(o);
             members.add(new RideMember(str(mm.get("userId")), str(mm.get("displayName")),
                     instant(mm.get("acceptedAt"))));
@@ -196,13 +206,13 @@ final class FirestoreMapper {
         r.setMembers(members);
 
         Map<String, String> pending = new LinkedHashMap<>();
-        for (Map.Entry<String, Object> e : map(s.get("pendingRequests")).entrySet()) {
+        for (Map.Entry<String, Object> e : map(d.get("pendingRequests")).entrySet()) {
             pending.put(e.getKey(), str(e.getValue()));
         }
         r.setPendingRequests(pending);
 
         List<Map<String, Object>> rawShares = new ArrayList<>();
-        for (Object o : map(s.get("shares")).values()) rawShares.add(map(o));
+        for (Object o : map(d.get("shares")).values()) rawShares.add(map(o));
         rawShares.sort(Comparator.comparingLong(sm -> num(sm.get("order"))));
         List<CostShare> shares = new ArrayList<>();
         for (Map<String, Object> sm : rawShares) {
@@ -213,15 +223,15 @@ final class FirestoreMapper {
             shares.add(c);
         }
         r.setShares(shares);
-        r.setSplitMethod(s.getString("splitMethod"));
-        r.setCreatedAt(instant(s.get("createdAt")));
-        r.setCompletedAt(instant(s.get("completedAt")));
+        r.setSplitMethod(str(d.get("splitMethod")));
+        r.setCreatedAt(instant(d.get("createdAt")));
+        r.setCompletedAt(instant(d.get("completedAt")));
         return r;
     }
 
     // ------------------------------------------------------------------ join request
 
-    static Map<String, Object> toMap(JoinRequest q) {
+    public static Map<String, Object> toMap(JoinRequest q) {
         Map<String, Object> m = new HashMap<>();
         m.put("rideId", q.getRideId());
         m.put("requesterId", q.getRequesterId());
@@ -235,22 +245,27 @@ final class FirestoreMapper {
     }
 
     static JoinRequest toRequest(DocumentSnapshot s) {
+        Map<String, Object> d = s.getData();
+        return toRequest(s.getId(), d == null ? new HashMap<>() : d);
+    }
+
+    public static JoinRequest toRequest(String id, Map<String, Object> d) {
         JoinRequest q = new JoinRequest();
-        q.setRequestId(s.getId());
-        q.setRideId(s.getString("rideId"));
-        q.setRequesterId(s.getString("requesterId"));
-        q.setRequesterName(s.getString("requesterName"));
-        q.setOrganizerId(s.getString("organizerId"));
-        q.setMessage(s.getString("message"));
-        q.setCreatedAt(instant(s.get("createdAt")));
-        q.setRespondedAt(instant(s.get("respondedAt")));
-        q.setStatus(RequestStatus.fromName(s.getString("status")));
+        q.setRequestId(id);
+        q.setRideId(str(d.get("rideId")));
+        q.setRequesterId(str(d.get("requesterId")));
+        q.setRequesterName(str(d.get("requesterName")));
+        q.setOrganizerId(str(d.get("organizerId")));
+        q.setMessage(str(d.get("message")));
+        q.setCreatedAt(instant(d.get("createdAt")));
+        q.setRespondedAt(instant(d.get("respondedAt")));
+        q.setStatus(RequestStatus.fromName(str(d.get("status"))));
         return q;
     }
 
     // ------------------------------------------------------------------ non-payment flag
 
-    static Map<String, Object> toMap(NonPaymentFlag f) {
+    public static Map<String, Object> toMap(NonPaymentFlag f) {
         Map<String, Object> m = new HashMap<>();
         m.put("rideId", f.getRideId());
         m.put("userId", f.getUserId());
@@ -264,13 +279,18 @@ final class FirestoreMapper {
     }
 
     static NonPaymentFlag toFlag(DocumentSnapshot s) {
-        NonPaymentFlag f = new NonPaymentFlag(s.getString("rideId"), s.getString("userId"),
-                s.getString("organizerId"));
-        f.setRideTitle(s.getString("rideTitle"));
-        f.setUserName(s.getString("userName"));
-        f.setOrganizerName(s.getString("organizerName"));
-        f.setAmountCents(num(s.get("amountCents")));
-        f.setCreatedAt(instant(s.get("createdAt")));
+        Map<String, Object> d = s.getData();
+        return toFlag(s.getId(), d == null ? new HashMap<>() : d);
+    }
+
+    public static NonPaymentFlag toFlag(String id, Map<String, Object> d) {
+        NonPaymentFlag f = new NonPaymentFlag(str(d.get("rideId")), str(d.get("userId")),
+                str(d.get("organizerId")));
+        f.setRideTitle(str(d.get("rideTitle")));
+        f.setUserName(str(d.get("userName")));
+        f.setOrganizerName(str(d.get("organizerName")));
+        f.setAmountCents(num(d.get("amountCents")));
+        f.setCreatedAt(instant(d.get("createdAt")));
         return f;
     }
 }

@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 
 /**
  * Logging that never writes an email address or a USC ID in plaintext (NFR-2).
- * The app plugs in an Android Log sink at startup; tests use the default stdout sink.
+ * The app plugs in an Android Log sink at startup; the default sink is stdout.
  */
 public final class SafeLogger {
 

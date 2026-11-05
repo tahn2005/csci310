@@ -48,11 +48,6 @@ public class RideSearchEngine {
         });
     }
 
-    /** Replaces the cached rides (used by tests and after a local change). */
-    void setCache(List<Ride> rides) {
-        cache = new ArrayList<>(rides);
-    }
-
     /** Filters and sorts the cached rides. */
     public List<Ride> search(SearchCriteria c) {
         List<Ride> out = new ArrayList<>();

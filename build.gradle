@@ -3,3 +3,10 @@ plugins {
     id 'com.android.application' version '8.7.0' apply false
     id 'com.google.gms.google-services' version '4.4.2' apply false
 }
+
+// Build output goes to "build.nosync" folders. iCloud Drive skips anything named *.nosync, so it
+// can't add "File 2.class" sync copies to the build output (they break the build with "Type ... is
+// defined multiple times") when the project is in a synced Desktop or Documents folder.
+allprojects {
+    layout.buildDirectory = file('build.nosync')
+}

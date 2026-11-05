@@ -1,22 +1,19 @@
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# Android Studio settings for this computer (recreated when the project is opened)
+/.idea/
+gradle/gradle-daemon-jvm.properties
 .DS_Store
 /build
 /app/build
+build.nosync/
 /captures
 .externalNativeBuild
 .cxx
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
-emulator-data/
 
 # Security Rules test dependencies
 rules-tests/node_modules/

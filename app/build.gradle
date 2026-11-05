@@ -2,12 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
-// Firebase configuration (see README.md):
-//  * If app/google-services.json exists, the app connects to that real Firebase project.
-//  * Otherwise it connects to the local Firebase Emulator Suite (demo project "demo-trojanrideshare").
-// Both can be overridden from local.properties:
-//   firebase.useEmulator=true|false
-//   firebase.emulatorHost=10.0.2.2
+// Backend (see README.md):
+//  * By default the app keeps its data in a database on the device, so it runs from Android
+//    Studio with no setup.
+//  * If app/google-services.json exists, it connects to that Firebase project instead.
+// Optional settings in local.properties:
+//   firebase.useEmulator=true            use the Firebase Local Emulator Suite
+//   firebase.emulatorHost=10.0.2.2       where the emulator runs (10.0.2.2 = this computer)
 //   places.apiKey=<Google Places API key>   (optional; OpenStreetMap is used when blank)
 def googleServicesFile = file('google-services.json')
 if (googleServicesFile.exists()) {
@@ -19,7 +20,7 @@ def localPropsFile = rootProject.file('local.properties')
 if (localPropsFile.exists()) {
     localPropsFile.withInputStream { localProps.load(it) }
 }
-def useEmulator = (localProps.getProperty('firebase.useEmulator') ?: (!googleServicesFile.exists()).toString()).toBoolean()
+def useEmulator = (localProps.getProperty('firebase.useEmulator') ?: 'false').toBoolean()
 def emulatorHost = localProps.getProperty('firebase.emulatorHost', '10.0.2.2')
 def placesKey = localProps.getProperty('places.apiKey', '')
 
@@ -34,7 +35,6 @@ android {
         versionCode = 1
         versionName = '1.0'
 
-        testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
 
         buildConfigField 'boolean', 'USE_FIREBASE_EMULATOR', useEmulator.toString()
         buildConfigField 'String', 'FIREBASE_EMULATOR_HOST', "\"${emulatorHost}\""
@@ -57,10 +57,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    testOptions {
-        unitTests.returnDefaultValues = true
-    }
 }
 
 dependencies {
@@ -80,8 +76,4 @@ dependencies {
 
     // Google Places SDK (Location Gateway, used when places.apiKey is set)
     implementation 'com.google.android.libraries.places:places:3.5.0'
-
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }

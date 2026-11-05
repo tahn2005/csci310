@@ -53,7 +53,7 @@ public class RideHistoryService {
         });
     }
 
-    /** Pure filtering step of {@link #getHistory}, separated for unit tests. */
+    /** Filtering step of {@link #getHistory}: no I/O, just the history rules. */
     static List<HistoryEntry> filter(List<Ride> all, HistoryFilter f, String uid) {
         List<HistoryEntry> out = new ArrayList<>();
         for (Ride r : all) {
@@ -148,7 +148,7 @@ public class RideHistoryService {
         });
     }
 
-    /** Pure computation of the monthly summary, separated for unit tests. */
+    /** Computes the monthly summary from the user's rides (FR-5.7, FR-5.8). */
     static MonthlySummary summarize(List<Ride> all, YearMonth m, String uid) {
         int completed = 0;
         long total = 0;

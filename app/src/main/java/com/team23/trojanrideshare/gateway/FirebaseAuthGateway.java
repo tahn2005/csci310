@@ -13,13 +13,18 @@ import com.team23.trojanrideshare.domain.Callback;
 import com.team23.trojanrideshare.domain.ErrorCode;
 import com.team23.trojanrideshare.domain.util.SafeLogger;
 
+import java.io.IOException;
+
 /** Firebase Authentication stores passwords as salted one-way hashes (NFR-2). */
 public class FirebaseAuthGateway implements AuthGateway {
 
     private final FirebaseAuth auth;
+    private final String offlineMessage;
 
-    public FirebaseAuthGateway(FirebaseAuth auth) {
+    /** @param offlineMessage what to tell the user when the server can't be reached. */
+    public FirebaseAuthGateway(FirebaseAuth auth, String offlineMessage) {
         this.auth = auth;
+        this.offlineMessage = offlineMessage;
     }
 
     @Override
@@ -59,13 +64,29 @@ public class FirebaseAuthGateway implements AuthGateway {
                 });
     }
 
+    /**
+     * The Auth SDK reports some unreachable-server cases as a generic FirebaseException
+     * ("An internal error has occurred. [ Failed to connect to /10.0.2.2:9099 ]").
+     */
+    private static boolean isConnectionFailure(Exception e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String m = t.getMessage();
+            if (t instanceof IOException) return true;
+            if (m != null && (m.contains("Failed to connect") || m.contains("Unable to resolve host")
+                    || m.contains("timeout") || m.contains("Connection refused"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public String currentUserId() {
         FirebaseUser u = auth.getCurrentUser();
         return u == null ? null : u.getUid();
     }
 
-    private static AppException map(Exception e, boolean signingUp) {
+    private AppException map(Exception e, boolean signingUp) {
         SafeLogger.log("Auth error: " + e);
         if (e instanceof FirebaseAuthUserCollisionException) {
             return new AppException(ErrorCode.DUPLICATE, "An account with this email already exists.", e);
@@ -83,9 +104,8 @@ public class FirebaseAuthGateway implements AuthGateway {
         if (e instanceof FirebaseTooManyRequestsException) {
             return new AppException(ErrorCode.NOT_ALLOWED, "Too many attempts. Please try again later.", e);
         }
-        if (e instanceof FirebaseNetworkException) {
-            return new AppException(ErrorCode.OFFLINE,
-                    "Couldn't reach the server. Check your connection and try again.", e);
+        if (e instanceof FirebaseNetworkException || isConnectionFailure(e)) {
+            return new AppException(ErrorCode.OFFLINE, offlineMessage, e);
         }
         return new AppException(ErrorCode.UNKNOWN, "Something went wrong. Please try again.", e);
     }
