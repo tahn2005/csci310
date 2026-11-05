@@ -5,9 +5,9 @@ they start and where they are going, request to join, manage riders, split the f
 and review their ride history and monthly summary.
 
 It follows the Project 2.2 design: a closed layered client (Presentation → Application Logic
-→ Data Access, plus a shared Domain Model & Utilities component). Data is stored in a database
-on the device by default, or in Firebase Authentication and Cloud Firestore when a Firebase
-project is connected, with Firestore Security Rules enforcing who may write what.
+→ Data Access, plus a shared Domain Model & Utilities component). Accounts and data are stored
+in the team's shared Firebase project (Firebase Authentication and Cloud Firestore), with
+Firestore Security Rules enforcing who may write what.
 The implementation document (`../Team 23 - Project 2.3.pdf`) lists every place the code
 departs from the 2.2 design and why.
 
@@ -31,26 +31,29 @@ departs from the 2.2 design and why.
 ## Running the app
 
 Open the `csci310-main` folder in Android Studio and run the `app` configuration on the
-Pixel 4 (API 33, Google APIs) emulator. No other setup is needed: by default the app keeps its
-data in a database on the device, and the Log In screen shows
-"Data: This device (built-in database)". Accounts, rides, requests, and cost splits stay saved
-when the app is closed and reopened. To act as several students, log out and sign up or log in
-as another account on the same emulator.
+Pixel 4 (API 33, Google APIs) emulator. No other setup is needed: `app/google-services.json`
+connects the app to the team's Firebase project `trojanrideshare23`, and the Log In screen
+shows "Data: Firebase project trojanrideshare23". The emulator or device needs an internet
+connection. Every device running the app shares the same accounts, rides, requests, and cost
+splits, so students on different devices can find and join each other's rides.
 
-### Optional: a shared Firebase project
+### Firebase project setup
 
-To share data between devices, connect a Firebase project:
+The project `trojanrideshare23` is already set up. To recreate it (for example, in a new
+Firebase account):
 
 1. In the Firebase console create a project, enable **Authentication → Email/Password**,
-   and create a **Cloud Firestore** database.
-2. Add an Android app with package name `com.team23.trojanrideshare` and put the downloaded
-   `google-services.json` in `app/`.
+   and create a **Cloud Firestore** database (Standard edition, default database ID).
+2. Add an Android app with package name `com.team23.trojanrideshare` and replace
+   `app/google-services.json` with the downloaded file.
 3. In **Firestore → Rules**, paste the contents of `firestore.rules` and publish.
 4. Rebuild. The Log In screen then shows "Data: Firebase project <id>".
 
-Developers can instead point the app at the Firebase Local Emulator Suite by adding
-`firebase.useEmulator=true` to `local.properties` (see the comment at the top of
-`app/build.gradle`).
+If `app/google-services.json` is missing, the app falls back to a database on the device
+("Data: This device (built-in database)"), which is not shared between devices.
+Developers can also point the app at the Firebase Local Emulator Suite by adding
+`firebase.useEmulator=true` to `local.properties` and starting the emulators with the Firebase
+CLI (see the comment at the top of `app/build.gradle`).
 
 ### Locations
 
