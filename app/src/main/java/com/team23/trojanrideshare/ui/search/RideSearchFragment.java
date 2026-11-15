@@ -95,7 +95,7 @@ public class RideSearchFragment extends BaseFragment {
 
             @Override
             public void onStopTrackingTouch(Slider s) {
-                if (!origin.getText().isEmpty() || !destination.getText().isEmpty()) runSearch();
+                if (!origin.getText().isEmpty() && !destination.getText().isEmpty()) runSearch();
             }
         });
         b.chipDate.setOnClickListener(v -> pickDate());
@@ -127,6 +127,8 @@ public class RideSearchFragment extends BaseFragment {
         b.clearButton.setOnClickListener(v -> {
             origin.clear();
             destination.clear();
+            b.originLayout.setError(null);
+            b.destinationLayout.setError(null);
             b.radius.setValue((float) SearchCriteria.DEFAULT_RADIUS);
             vm.clearFilters();
         });
@@ -168,6 +170,16 @@ public class RideSearchFragment extends BaseFragment {
     /** FR-3.2: resolve typed keywords to places, then apply every filter together. */
     private void runSearch() {
         hideKeyboard();
+        b.originLayout.setError(null);
+        b.destinationLayout.setError(null);
+        boolean missingOrigin = origin.getText().trim().isEmpty();
+        boolean missingDestination = destination.getText().trim().isEmpty();
+        if (missingOrigin) b.originLayout.setError("Enter an origin to search.");
+        if (missingDestination) b.destinationLayout.setError("Enter a destination to search.");
+        if (missingOrigin || missingDestination) {
+            toast("Enter both an origin and a destination to search.");
+            return;
+        }
         origin.resolveTyped(new Callback<Place>() {
             @Override
             public void onSuccess(Place o) {
