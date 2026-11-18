@@ -43,6 +43,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // JaCoCo line/branch coverage for the unit tests: ./gradlew createDebugUnitTestCoverageReport
+            enableUnitTestCoverage = true
+        }
         release {
             minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -52,6 +56,11 @@ android {
     buildFeatures {
         buildConfig = true
         viewBinding = true
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+        animationsDisabled = true
     }
 
     compileOptions {
