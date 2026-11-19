@@ -6,6 +6,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
@@ -70,8 +73,20 @@ public class AppContainer {
     private final SharedPreferences prefs;
 
     public AppContainer(Context context) {
+        this(context, null, null);
+    }
+
+    /**
+     * Test hook for the instrumented (Espresso) tests: when {@code testDatabase} is set, the app
+     * keeps its data in that file on the device instead of Firebase, with its own saved login and
+     * clock settings, so tests never touch the shared project. {@code testPlaces}, when set,
+     * replaces the location API so suggestions are the same on every run.
+     */
+    @VisibleForTesting
+    public AppContainer(Context context, @Nullable File testDatabase, @Nullable LocationGateway testPlaces) {
         SafeLogger.setSink(msg -> Log.d("TrojanRideshare", msg));
-        prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        boolean testing = testDatabase != null;
+        prefs = context.getSharedPreferences(testing ? PREFS + "-test" : PREFS, Context.MODE_PRIVATE);
         clock.setOffset(Duration.ofMinutes(prefs.getLong(KEY_CLOCK_OFFSET, 0)));
 
         UserRepository userRepo;
@@ -79,7 +94,7 @@ public class AppContainer {
         JoinRequestRepository requestRepo;
         AuthGateway auth;
         boolean firebaseProject = !FirebaseApp.getApps(context).isEmpty(); // google-services.json
-        if (firebaseProject || BuildConfig.USE_FIREBASE_EMULATOR) {
+        if (!testing && (firebaseProject || BuildConfig.USE_FIREBASE_EMULATOR)) {
             FirebaseApp app = firebaseApp(context);
             FirebaseFirestore db = FirebaseFirestore.getInstance(app);
             FirebaseAuth firebaseAuth = FirebaseAuth.getInstance(app);
@@ -108,7 +123,8 @@ public class AppContainer {
             // No Firebase project configured: keep everything in a database on this device, so
             // the app works as soon as it is run from Android Studio.
             Handler main = new Handler(Looper.getMainLooper());
-            LocalStore store = new LocalStore(new File(context.getFilesDir(), LOCAL_DB_FILE),
+            File dbFile = testing ? testDatabase : new File(context.getFilesDir(), LOCAL_DB_FILE);
+            LocalStore store = new LocalStore(dbFile,
                     Executors.newSingleThreadExecutor(), main::post);
             LocalDatabase local = new LocalDatabase(store, clock);
             userRepo = local;
@@ -125,11 +141,14 @@ public class AppContainer {
                     prefs.edit().putString(KEY_LOCAL_UID, uid).apply();
                 }
             });
-            backendLabel = "This device (built-in database)";
+            backendLabel = testing ? "Test database (this device)" : "This device (built-in database)";
         }
 
         LocationGateway places;
-        if (!BuildConfig.PLACES_API_KEY.isEmpty()) {
+        if (testPlaces != null) {
+            places = testPlaces;
+            locationLabel = "Test locations";
+        } else if (!BuildConfig.PLACES_API_KEY.isEmpty()) {
             places = new GooglePlacesGateway(context, BuildConfig.PLACES_API_KEY);
             locationLabel = "Google Places";
         } else {
