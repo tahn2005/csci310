@@ -148,6 +148,12 @@ public class CreateRideFragment extends BaseFragment {
         return true;
     }
 
+    /** Keeps "Please fix the highlighted fields." above Post Ride so it can be tapped again right away. */
+    @Override
+    protected View snackbarAnchor() {
+        return b == null ? super.snackbarAnchor() : b.post;
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();

@@ -46,9 +46,17 @@ public abstract class BaseFragment extends Fragment {
     protected void toast(String text) {
         if (getView() == null || text == null) return;
         Snackbar s = Snackbar.make(getView(), text, Snackbar.LENGTH_LONG);
-        View nav = main().bottomNavIfVisible();
-        if (nav != null) s.setAnchorView(nav);
+        View anchor = snackbarAnchor();
+        if (anchor != null) s.setAnchorView(anchor);
         s.show();
+    }
+
+    /**
+     * The view messages appear above. Defaults to the bottom navigation; a form whose main button
+     * sits at the bottom of the screen returns that button so a message never covers it.
+     */
+    protected View snackbarAnchor() {
+        return main().bottomNavIfVisible();
     }
 
     protected void hideKeyboard() {
