@@ -71,11 +71,12 @@ public class RideSearchTest {
     private static final long SUGGESTION_SETTLE_MS = 700;
 
     private final LocalDate day = LocalDate.now().plusDays(7);
+    private AppContainer app;
     private ActivityScenario<MainActivity> scenario;
 
     @Before
     public void postRidesAndLogInAsSearcher() {
-        AppContainer app = TestBackend.install();
+        app = TestBackend.install();
         TestBackend.signUp(app, "Alex Rivera", "alex.test@usc.edu", "1000000001");
         TestBackend.postRide(app, USC_LAX, TestBackend.USC, TestBackend.LAX, day.atTime(9, 0), 4);
         TestBackend.postRide(app, EXPO_LAX, EXPO_PARK, TestBackend.LAX, day.atTime(10, 0), 4);
@@ -94,9 +95,11 @@ public class RideSearchTest {
         waitFor(results(), showsRides(USC_LAX, EXPO_LAX, DTLA_LAX, USC_SM, PAS_LAX));
     }
 
+    /** Logs out so the next test starts at the Log In screen, as other test classes expect. */
     @After
-    public void close() {
+    public void cleanUp() {
         if (scenario != null) scenario.close();
+        if (app != null) app.account.logOut();
     }
 
     // ---------------------------------------------------------------- helpers
