@@ -41,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -69,9 +70,26 @@ public class JoinRequestFlowTest {
         TestBackend.logIn(app, ALEX);
     }
 
+    /**
+     * Leaves the app the way the next test expects it: logged out, with My Rides set back to its
+     * first tab. Otherwise later test classes start logged in, or on "Joined"/"My Requests".
+     */
     @After
-    public void close() {
+    public void cleanUp() {
         if (scenario != null) scenario.close();
+        if (app != null) app.account.logOut();
+        resetMyRidesTab();
+    }
+
+    /** My Rides remembers its last tab in a static field, so it outlives this test. Put it back to Organizing. */
+    private static void resetMyRidesTab() {
+        try {
+            Field lastTab = MyRidesFragment.class.getDeclaredField("lastTab");
+            lastTab.setAccessible(true);
+            lastTab.setInt(null, 0);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Couldn't reset the My Rides tab", e);
+        }
     }
 
     // ---------------------------------------------------------------- helpers
